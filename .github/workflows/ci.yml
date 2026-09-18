@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  validate:
-    name: Validate Expo app
+  quality:
+    name: Lint and type-check
     runs-on: ubuntu-latest
 
     steps:
@@ -30,3 +30,19 @@ jobs:
 
       - name: Type-check
         run: npx tsc --noEmit
+
+      - name: Validate Expo configuration
+        run: npx expo config --type public
+
+  dependency-review:
+    name: Review dependency changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
