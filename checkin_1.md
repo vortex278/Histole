@@ -9,7 +9,7 @@ Histole is a history-based (wow, who would have guessed) guessing game designed 
 
 Histole will be an IOS application because I want to use it after I develop the whole thing using React Native and Expo. Dev work will be done entirely in Visual Studio Code.
 
-The project will primarily focus on the core gameplay of the Wordle-like game loop, with the player guessing an event and the app giving feedback on how close or far away their guess is to the target event. The player will have 15 guesses to get the correct event, and each time they guess they will be given a green, yellow, or gray tag on each category, indicating whether the guessed attribute is close to, right on, or far away from the target event. 
+The project will primarily focus on the core gameplay of the Wordle-like game loop, with the player guessing an event and the app giving feedback on how close or far away their guess is to the target event. The player will have 15 guesses to get the correct event, and each time they guess they will be given a green, yellow, or gray feedback on each category, indicating whether the guessed attribute is close to, correct, or far away from the target event. 
 
 For this semester, I'm going to focus on the primary game loop and database design, with outside features such as user logins and statistics/analytics tracking with streaks being added later or if I have time this semester.
 
@@ -31,6 +31,7 @@ EVENT
 | scale_id | INT | FK | References Scale(scale_id) |
 | tag_id | INT | FK | References Tag(tag_id) |
 | description | TEXT | | Description of historical event to be shown at the end of the game |
+| image | VARCHAR(2048) | | Photo to represent the event, shown in circle next to guess area
 
 STATE
 | Name | Data Type | Key | Description |
@@ -62,9 +63,11 @@ EVENT.era_id -> ERA.era_id
 EVENT.scale_id -> SCALE.scale_id
 EVENT.tag_id -> TAG.tag_id
 
-[Relationship Logic]
+The EVENT table contains all of the main information for each of the events. Each event is associated with one state, one era, one event scale, and one tag using the foreign keys. 
 
 ### SQL and Relational Algebra
+
+
 
 ## AI Utilization Plan
 
@@ -81,3 +84,4 @@ I fully intend to manually program the backend databases, only using GitHub Copi
 **Database Design**
 
 **React Native**
+"So I want help with React without you doing the code for me. I want detailed step by step instructions to implement what I want to do so I can do it myself, and then we can debug mistakes from there"
