@@ -37,6 +37,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# test output
+coverage/
+artifacts/
+
 example
 
 # generated native folders
