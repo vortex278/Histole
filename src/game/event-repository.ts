@@ -17,3 +17,13 @@ export const findEventByName = (query: string): EventCard | undefined => {
 
   return MOCK_EVENTS.find((event) => event.name.toLowerCase() === normalizedQuery);
 };
+
+export const findEventSuggestions = (query: string): EventCard[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return [];
+  }
+
+  return MOCK_EVENTS.filter((event) => event.name.toLowerCase().includes(normalizedQuery)).slice(0, 5);
+};

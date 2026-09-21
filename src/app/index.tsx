@@ -11,15 +11,19 @@ import {
   getTagStatus,
   getYearStatus,
 } from "@/game/event-logic";
-import { findEventByName, getDailyTarget } from "@/game/event-repository";
+import { findEventByName, findEventSuggestions, getDailyTarget } from "@/game/event-repository";
 
 export default function Index() {
   const targetEvent = getDailyTarget();
   const [guessText, setGuessText] = useState("");
+  const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
   const [guesses, setGuesses] = useState<EventCard[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const maxGuesses = 15;
+  const eventSuggestions = findEventSuggestions(guessText);
   const submitGuess = () => {
+    setIsSuggestionVisible(false);
+
     if (guesses.length >= maxGuesses) {
       return;
     }
@@ -37,24 +41,49 @@ export default function Index() {
     ]);
 
     setGuessText("");
-  setErrorMessage("");
+    setErrorMessage("");
   };
+  const selectSuggestion = (eventName: string) => {
+    setGuessText(eventName);
+    setIsSuggestionVisible(false);
+    setErrorMessage("");
+  };
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <Text style={styles.title}>Welcome to Histole!</Text>
       <Text style={styles.guessCount}>
         Guesses: {guesses.length} / {maxGuesses}
       </Text>
-      <TextInput
-        style={styles.input}
-        value={guessText}
-        onChangeText={setGuessText}
-        placeholder="Enter your guess"
-        placeholderTextColor="#8f9498"
-        returnKeyType="done"
-        onSubmitEditing={submitGuess}
-        editable={guesses.length < maxGuesses}
-      />
+      <View style={styles.inputSection}>
+        <TextInput
+          style={styles.input}
+          value={guessText}
+          onChangeText={(text) => {
+            setGuessText(text);
+            setIsSuggestionVisible(true);
+          }}
+          onFocus={() => setIsSuggestionVisible(true)}
+          placeholder="Enter your guess"
+          placeholderTextColor="#8f9498"
+          returnKeyType="done"
+          onSubmitEditing={submitGuess}
+          editable={guesses.length < maxGuesses}
+        />
+        {isSuggestionVisible && eventSuggestions.length > 0 && (
+          <View style={styles.suggestionList}>
+            {eventSuggestions.map((event) => (
+              <Pressable
+                key={event.eventId}
+                style={styles.suggestion}
+                onPress={() => selectSuggestion(event.name)}
+              >
+                <Text style={styles.suggestionText}>{event.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
       {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
       <Pressable style={styles.button} onPress={submitGuess} disabled={guesses.length >= maxGuesses}>
         <Text style={styles.buttonText}>Submit Guess</Text>
@@ -121,18 +150,41 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "700",
     textAlign: "center",
-    },
-  input: {
+  },
+  inputSection: {
     width: "90%",
     maxWidth: 480,
     marginTop: 32,
+    zIndex: 1,
+  },
+  input: {
+    width: "100%",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
     backgroundColor: "#f0f0f3",
     color: "#202224",
     fontSize: 16,
-    },
+  },
+  suggestionList: {
+    overflow: "hidden",
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderColor: "#d5d7da",
+  },
+  suggestion: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e6e8",
+  },
+  suggestionText: {
+    color: "#202224",
+    fontSize: 16,
+  },
   button: {
     marginTop: 16,
     paddingHorizontal: 24,
