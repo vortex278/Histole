@@ -2,45 +2,34 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-type EventCard = {
-  name: string,
-  image: string,
-  year: string,
-  state: string,
-  era: string,
-  scale: string,
-  tag: string,
-}
+import {
+  EventCard,
+  getAttributeColor,
+  getEraStatus,
+  getScaleStatus,
+  getStateStatus,
+  getTagStatus,
+  getYearStatus,
+} from "@/game/event-logic";
+import { findEventByName, getDailyTarget } from "@/game/event-repository";
 
 export default function Index() {
+  const targetEvent = getDailyTarget();
   const [guessText, setGuessText] = useState("");
-  const [guesses , setGuesses] = useState<EventCard[]>([]);
-  <Text style={{ color: "white" }}>
-    First guess: {guesses[0]?.name}
-  </Text>
+  const [guesses, setGuesses] = useState<EventCard[]>([]);
+  const [errorMessage, setErrorMessage] = useState("");
   const maxGuesses = 15;
   const submitGuess = () => {
     if (guesses.length >= maxGuesses) {
       return;
     }
 
-    const cleanedGuess = guessText.trim();
+    const nextEvent = findEventByName(guessText);
 
-    if (cleanedGuess.length === 0) {
+    if (!nextEvent) {
+      setErrorMessage("Choose an event from the mock event catalog.");
       return;
     }
-
-    const nextEvent: EventCard = {
-      name: cleanedGuess,
-      image: "https://private-user-images.githubusercontent.com/150096803/654976256-3981c67b-b649-49db-8212-0c4f36e99675.jpg?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3ODk5MTk5MDksIm5iZiI6MTc4OTkxOTYwOSwicGF0aCI6Ii8xNTAwOTY4MDMvNjU0OTc2MjU2LTM5ODFjNjdiLWI2NDktNDlkYi04MjEyLTBjNGYzNmU5OTY3NS5qcGc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYwOTIwJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDkyMFQxNTUzMjlaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1hNzQ1NDQxZWUzNzI4NTJiMTEyMjA2OWIyMGQ4MGJmZjQxZjUxNmU1ODRiMjZiOTM5YTI2MzMwYTI1MTk2NWQ4JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCZyZXNwb25zZS1jb250ZW50LXR5cGU9aW1hZ2UlMkZqcGVnIn0.LUSqCYTwp-QBGR_dF5Qb97vgXziBboKXUKJkJBC-KW0",
-      year: "2023",
-      era: "Modern",
-      state: "California",
-      scale: "National",
-      tag: "Politics",
-    };
-
-    console.log("Submitted guess:", cleanedGuess);
 
     setGuesses((previousGuesses) => [
       nextEvent,
@@ -48,6 +37,7 @@ export default function Index() {
     ]);
 
     setGuessText("");
+  setErrorMessage("");
   };
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -65,11 +55,12 @@ export default function Index() {
         onSubmitEditing={submitGuess}
         editable={guesses.length < maxGuesses}
       />
+      {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
       <Pressable style={styles.button} onPress={submitGuess} disabled={guesses.length >= maxGuesses}>
         <Text style={styles.buttonText}>Submit Guess</Text>
       </Pressable>
-      {guesses.map((eventCard, index) => (
-        <View style={styles.gameCard} key={eventCard.name}>
+      {guesses.map((eventCard) => (
+        <View style={styles.gameCard} key={eventCard.eventId}>
           <View style={styles.eventHeader}>
             <Image
               source={{ uri: eventCard.image }}
@@ -82,27 +73,27 @@ export default function Index() {
           </View>
 
           <View style={styles.attributeGrid}>
-            <View style={styles.attributeCard}>
+            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getYearStatus(eventCard.year, targetEvent.year)) }]}>
               <Text style={styles.attributeValue}>{eventCard.year}</Text>
               <Text style={styles.attributeLabel}>Year</Text>
             </View>
 
-            <View style={styles.attributeCard}>
+            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getStateStatus(eventCard.state, targetEvent.state)) }]}>
               <Text style={styles.attributeValue}>{eventCard.state}</Text>
               <Text style={styles.attributeLabel}>State</Text>
             </View>
 
-            <View style={styles.attributeCard}>
+            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getEraStatus(eventCard.era, targetEvent.era)) }]}>
               <Text style={styles.attributeValue}>{eventCard.era}</Text>
               <Text style={styles.attributeLabel}>Era</Text>
             </View>
 
-            <View style={styles.attributeCard}>
+            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getScaleStatus(eventCard.scale, targetEvent.scale)) }]}>
               <Text style={styles.attributeValue}>{eventCard.scale}</Text>
               <Text style={styles.attributeLabel}>Scale</Text>
             </View>
 
-            <View style={styles.attributeCard}>
+            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getTagStatus(eventCard.tag, targetEvent.tag)) }]}>
               <Text style={styles.attributeValue}>{eventCard.tag}</Text>
               <Text style={styles.attributeLabel}>Tag</Text>
             </View>
@@ -212,5 +203,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     color: "#ffffff",
     fontSize: 16,
-  }
+  },
+  errorMessage: {
+    marginTop: 12,
+    color: "#f2c94c",
+    fontSize: 14,
+  },
 });
