@@ -1,0 +1,123 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, tests, and type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality checks
+        shell: bash
+        run: |
+          mkdir -p artifacts/logs
+          set +e
+
+          npm run lint 2>&1 | tee artifacts/logs/lint.log
+          lint_status=${PIPESTATUS[0]}
+
+          npm test -- --runInBand 2>&1 | tee artifacts/logs/test.log
+          test_status=${PIPESTATUS[0]}
+
+          npx tsc --noEmit 2>&1 | tee artifacts/logs/typecheck.log
+          typecheck_status=${PIPESTATUS[0]}
+
+          npx expo config --type public 2>&1 | tee artifacts/logs/expo-config.log
+          expo_config_status=${PIPESTATUS[0]}
+
+          if [ "$lint_status" -ne 0 ] || [ "$test_status" -ne 0 ] || [ "$typecheck_status" -ne 0 ] || [ "$expo_config_status" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload CI logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-${{ github.run_id }}
+          path: artifacts/logs
+          if-no-files-found: warn
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: artifacts/test-results/junit.xml
+          if-no-files-found: warn
+
+      - name: Publish CI links
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## CI artifacts"
+            echo "- Workflow logs and downloadable artifacts: [open this workflow run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+            if [ -n "${{ github.event.pull_request.html_url }}" ]; then
+              echo "- Pull request and linked issue context: [open the pull request](${{ github.event.pull_request.html_url }})"
+            fi
+            echo "- The test-results artifact contains the initial JUnit test report."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  secret-scan:
+    name: Scan for exposed secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan with TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --results=verified,unknown
+
+      - name: Publish scan link
+        if: always()
+        run: |
+          {
+            echo "## Secret scan"
+            echo "- TruffleHog results are recorded in this workflow run: [open scan logs](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  dependency-audit:
+    name: Audit dependencies
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
