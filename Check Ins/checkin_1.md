@@ -5,11 +5,11 @@
 
 ## Problem Definition and Mobile Scope
 
-Histole is a history-based (wow, who would have guessed) guessing game designed to do the one thing that no one can do besides very cool old people (love you grandma), make history fun and interesting to learn. Players will attempt to identify a target historical event using information about its year, state, historical era, event scale, and varying associated tags.
+Histole is a history-based (wow, who would have guessed) guessing game designed to do the one thing that no one can do besides very cool old people (love you grandma), make history fun and interesting to learn. Players will attempt to identify a target historical event using information about its year, state, historical era, event scale, and its tag.
 
-Histole will be an IOS application because I want to use it after I develop the whole thing using React Native and Expo. Dev work will be done entirely in Visual Studio Code.
+Histole will be an iOS application because I want to use it after I develop the whole thing using React Native and Expo. Dev work will be done entirely in Visual Studio Code.
 
-The project will primarily focus on the core gameplay of the Wordle-like game loop, with the player guessing an event and the app giving feedback on how close or far away their guess is to the target event. The player will have 15 guesses to get the correct event, and each time they guess they will be given a green, yellow, or gray tag on each category, indicating whether the guessed attribute is close to, right on, or far away from the target event. 
+The project will primarily focus on the core gameplay of the Wordle-like game loop, with the player guessing an event and the app giving feedback on how close or far away their guess is to the target event. The player will have 15 guesses to get the correct event, and each time they guess they will be given a green, yellow, or gray color on each category "card", indicating whether the guessed attribute is correct, close to, or far away from the target event. 
 
 For this semester, I'm going to focus on the primary game loop and database design, with outside features such as user logins and statistics/analytics tracking with streaks being added later or if I have time this semester.
 
@@ -66,6 +66,9 @@ EVENT.tag_id -> TAG.tag_id
 
 ### SQL and Relational Algebra
 
+NEED SQL
+NEED 5 STATEMENTS
+
 ## AI Utilization Plan
 
 I plan on using GitHub Copilot for general help with coding the frontend, as I've never used React Native or Expo and intend of making this app look as good as possible while throwing my full bandwidth into the database design and development. 
@@ -75,9 +78,13 @@ I fully intend to manually program the backend databases, only using GitHub Copi
 ### Example Prompts
 
 **Relational Algebra**
+"Can you explain how to do a natural join between the EVENT, STATE, and ERA tables using relational algebra?"
 
 **SQL Debugging**
+"Here is the attached error message and SQL schema. I don't want the exact schema, but I want help identifying the problem so I can fix it. What's going on?"
 
 **Database Design**
+"In your opinion, did I design my tables correctly for the use-case of my game? Do I need a different relationship or something?"
 
 **React Native**
+"Give me step by step instructions on how to create a dropdown that populates with information from the database on the input field the user types on that relates to what they are currently typing. Don't implement it for me."
