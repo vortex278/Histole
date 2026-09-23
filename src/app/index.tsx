@@ -19,12 +19,14 @@ export default function Index() {
   const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
   const [guesses, setGuesses] = useState<EventCard[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isGameWon, setIsGameWon] = useState(false);
   const maxGuesses = 15;
+  const isGameOver = isGameWon || guesses.length >= maxGuesses;
   const eventSuggestions = findEventSuggestions(guessText);
   const submitGuess = () => {
     setIsSuggestionVisible(false);
 
-    if (guesses.length >= maxGuesses) {
+    if (isGameOver) {
       return;
     }
 
@@ -45,6 +47,10 @@ export default function Index() {
       ...previousGuesses,
     ]);
 
+    if (nextEvent.eventId === targetEvent.eventId) {
+      setIsGameWon(true);
+    }
+
     setGuessText("");
     setErrorMessage("");
   };
@@ -60,7 +66,7 @@ export default function Index() {
       <Text style={styles.guessCount}>
         Guesses: {guesses.length} / {maxGuesses}
       </Text>
-      <View style={styles.inputSection}>
+      {!isGameWon && <View style={styles.inputSection}>
         <TextInput
           style={styles.input}
           value={guessText}
@@ -73,7 +79,7 @@ export default function Index() {
           placeholderTextColor="#8f9498"
           returnKeyType="done"
           onSubmitEditing={submitGuess}
-          editable={guesses.length < maxGuesses}
+          editable={!isGameOver}
         />
         {isSuggestionVisible && eventSuggestions.length > 0 && (
           <View style={styles.suggestionList}>
@@ -88,11 +94,12 @@ export default function Index() {
             ))}
           </View>
         )}
-      </View>
+      </View>}
       {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
-      <Pressable style={styles.button} onPress={submitGuess} disabled={guesses.length >= maxGuesses}>
+      {!isGameWon && <Pressable style={styles.button} onPress={submitGuess} disabled={isGameOver}>
         <Text style={styles.buttonText}>Submit Guess</Text>
-      </Pressable>
+      </Pressable>}
+      {isGameWon && <Text style={styles.successMessage}>You got it! Today&apos;s event is {targetEvent.name}.</Text>}
       {guesses.map((eventCard) => (
         <View style={styles.gameCard} key={eventCard.eventId}>
           <View style={styles.eventHeader}>
@@ -265,5 +272,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: "#f2c94c",
     fontSize: 14,
+  },
+  successMessage: {
+    marginTop: 24,
+    color: "#4caf50",
+    fontSize: 18,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
