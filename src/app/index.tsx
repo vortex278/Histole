@@ -3,13 +3,13 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
-  EventCard,
-  getAttributeColor,
-  getEraStatus,
-  getScaleStatus,
-  getStateStatus,
-  getTagStatus,
-  getYearStatus,
+    EventCard,
+    getAttributeColor,
+    getEraStatus,
+    getScaleStatus,
+    getStateStatus,
+    getTagStatus,
+    getYearStatus,
 } from "@/game/event-logic";
 import { findEventByName, findEventSuggestions, getDailyTarget } from "@/game/event-repository";
 
