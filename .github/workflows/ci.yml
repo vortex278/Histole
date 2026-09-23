@@ -99,8 +99,8 @@ jobs:
             echo "- TruffleHog results are recorded in this workflow run: [open scan logs](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  dependency-review:
-    name: Review dependency changes
+  dependency-audit:
+    name: Audit dependencies
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -110,7 +110,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Check dependency changes
-        uses: actions/dependency-review-action@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          fail-on-severity: high
+          node-version: 22.13.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
