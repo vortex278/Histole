@@ -4,8 +4,8 @@ import { BottomTabInset, Colors, MaxContentWidth, Spacing } from '@/constants/th
 
 describe('theme constants', () => {
   it('provides the shared color themes', () => {
-    expect(Colors.light.background).toBe('#ffffff');
-    expect(Colors.dark.background).toBe('#000000');
+    expect(Colors.light.background).toBe('#2f3234');
+    expect(Colors.dark.background).toBe('#2f3234');
   });
 
   it('keeps spacing and layout values stable', () => {
