@@ -35,6 +35,11 @@ export default function Index() {
       return;
     }
 
+    if (guesses.some((event) => event.eventId === nextEvent.eventId)) {
+      setErrorMessage("Event has already been guessed.");
+      return;
+    }
+
     setGuesses((previousGuesses) => [
       nextEvent,
       ...previousGuesses,
