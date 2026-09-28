@@ -5,9 +5,9 @@
 
 ## Problem Definition and Mobile Scope
 
-Histole is a history-based (wow, who would have guessed) guessing game designed to do the one thing that no one can do besides very cool old people (love you grandma), make history fun and interesting to learn. Players will attempt to identify a target historical event using information about its year, state, historical era, event scale, and its tag.
+Histole is a history-based (wow, who would have guesses) guessing game designed to do the one thing that only really cool old people can do (love you, grandma). Make learning about history more interactive. Players attempt to identify a target historical event using information about its year, state, historical era, event scale, and tag.
 
-Histole will be an iOS application because I want to use it after I develop the whole thing using React Native and Expo. Dev work will be done entirely in Visual Studio Code.
+Histole will be an iOS application, because I want to use the thing after I develop it, developed with React Native and Expo. Development will be done in Visual Studio Code.
 
 The project will primarily focus on the core gameplay of the Wordle-like game loop, with the player guessing an event and the app giving feedback on how close or far away their guess is to the target event. The player will have 15 guesses to get the correct event, and each time they guess they will be given a green, yellow, or gray color on each category "card", indicating whether the guessed attribute is correct, close to, or far away from the target event. 
 
@@ -18,9 +18,9 @@ For this semester, I'm going to focus on the primary game loop and database desi
 This is just a quick general idea on what dictates the different colors of feedback for each category:
 - Year: Considered 'close' (Yellow) when it is within 10 years in either direction of the target event
 - State: States are considered 'close' when it borders the target state. Anything not listed in the border states is considered far away, and therefore grey. This logic is already set up, and you can see how it works in "event-logic.ts"
-- Era: An era is considered 'close' when it is adjacent to the target event's era in the chronological or scope ordering.
-- Scale: This works the same way as Eras so, it will be considered 'close' if it is adjacent to the target event's era in the chronological or scope ordering
-- Tag: Tags are either matching or non-matching, there is no 'closeness' for this one. I'm not exactly sure how to rank the closeness between military events and and civil rights, you know?
+- Era: An era is considered 'close' when it is adjacent to the target event's era in the chronological ordering.
+- Scale: A scale is considered 'close' when it is adjacent to the target event's scale in the scope ordering.
+- Tag: Tags are either matching or non-matching. There is no closeness ranking because I'm not exactly sure how to rank the closeness of military and civil rights events, for example.
 
 ## Initial Database Design and Mechanics
 
@@ -115,45 +115,47 @@ CREATE TABLE Event (
 
 ### Relational Algebra
 
-These relational-algebra queries are based on Histole's planned gameplay. They demonstrate how the database would retrieve the daily target, locate a player's selected event, gather the attributes needed for feedback, compare event years, and identify matching tags.
+These relational-algebra queries are based on Histole's planned gameplay. They demonstrate how the database would retrieve the daily target, locate a player's selected event, gather the attributes needed for feedback, compare the guess with the target, and identify matching tags. In these expressions, `target_id` i a value supplied by the game, while `guessed_name` is user input.
+
+For the relational algebra stuff below, `T = σ event_id = target_id (EVENT)` represents the target event and `G = σ event_name = guessed_name (EVENT)` represents the player's selected event.
 
 1. Select the daily target event:
 
-    σ event_id = target_id (EVENT)
+    T = σ event_id = target_id (EVENT)
 
 2. Find the event selected by the player:
 
-    σ event_name = guessed_name (EVENT)
+    G = σ event_name = guessed_name (EVENT)
 
-3. Display the attributes needed to provide feedback for an event:
+3. Retrieve the attributes needed to provide feedback for the player's guessed event:
 
-    π event_name, event_year, state_name, era_name, scale_name, tag_name
+        π G.event_name, G.event_year, STATE.state_name, ERA.era_name, SCALE.scale_name, TAG.tag_name
     (
-      EVENT ⋈ EVENT.state_id = STATE.state_id STATE
-        ⋈ EVENT.era_id = ERA.era_id ERA
-        ⋈ EVENT.scale_id = SCALE.scale_id SCALE
-        ⋈ EVENT.tag_id = TAG.tag_id TAG
+            G ⋈ G.state_id = STATE.state_id STATE
+                ⋈ G.era_id = ERA.era_id ERA
+                ⋈ G.scale_id = SCALE.scale_id SCALE
+                ⋈ G.tag_id = TAG.tag_id TAG
     )
 
-4. Find events within ten years of the player's guessed event year:
+        This retrieves the category values for the guessed event. The same expression can be applied to `T` to retrieve the target event's values, after which the application compares the two results using the rules described above.
 
-    σ |event_year - guessed_year| ≤ 10 (EVENT)
+4. Compare the guessed event's year with the target event's year:
 
-5. Find events with a tag matching the player's guessed tag:
+    σ |G.event_year - T.event_year| ≤ 10 (G × T)
 
-    π event_name
-    (σ tag_name = guessed_tag (EVENT ⋈ TAG))
+5. Determine whether the guessed event and target event have the same tag:
+
+    π G.event_name, T.event_name
+    (σ G.tag_id = T.tag_id (G × T))
 
 These queries describe the planned database-backed version of the game. The current prototype uses five in-memory mock events, but these operations represent the database actions needed to support the core guessing loop.
 
 
 ## AI Utilization Plan
 
-I plan on using GitHub Copilot in Visual Studio Code for general help with coding the frontend, as I've never used React Native or Expo and intend of making this app look as good as possible while throwing my full bandwidth into the database design and development. 
+I plan on using GitHub Copilot Chat in Visual Studio Code for general tutoring, documentation research, and limited frontend assistance. I have not used React Native or Expo before, so I want to be able to ask for explanations of their APIs and for step-by-step implementation help.
 
-I fully intend to manually program the backend databases, only using GitHub Copilot or other AI models if I truly get stuck or for other research ideas, for example with SQL errors or if my approach to problems is logically sound or not. After all, this is a databases class, my primary focus should be on the databases.
-
-I'm also gonna use it as a tutor if I need help with any concepts that I may need help with or any general debugging for things that I come across that I just can't figure out.
+I fully intend to manually design and program the database schema. I want to use AI as a research partner and tutor for debugging rather than asking it to generate the database for me. This is a databases class, I should know how to program databases.
 
 ### Example Prompts
 
