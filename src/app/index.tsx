@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import {
     EventCard,
@@ -21,7 +21,8 @@ export default function Index() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isGameWon, setIsGameWon] = useState(false);
   const maxGuesses = 15;
-  const isGameOver = isGameWon || guesses.length >= maxGuesses;
+  const isGameLost = guesses.length >= maxGuesses && !isGameWon;
+  const isGameOver = isGameWon || isGameLost;
   const eventSuggestions = findEventSuggestions(guessText);
   const submitGuess = () => {
     setIsSuggestionVisible(false);
@@ -82,7 +83,11 @@ export default function Index() {
           editable={!isGameOver}
         />
         {isSuggestionVisible && eventSuggestions.length > 0 && (
-          <View style={styles.suggestionList}>
+          <ScrollView
+            style={styles.suggestionList}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
             {eventSuggestions.map((event) => (
               <Pressable
                 key={event.eventId}
@@ -92,7 +97,7 @@ export default function Index() {
                 <Text style={styles.suggestionText}>{event.name}</Text>
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         )}
       </View>}
       {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
@@ -141,6 +146,29 @@ export default function Index() {
           </View>
         </View>
       ))}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isGameLost}
+        onRequestClose={() => undefined}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.gameOverModal}>
+            <Text style={styles.gameOverTitle}>Game Over</Text>
+            <Text style={styles.gameOverMessage}>
+              The answer was:
+            </Text>
+            <Image
+              source={{ uri: targetEvent.image }}
+              style={styles.answerImage}
+            />
+            <Text style={styles.answerName}>{targetEvent.name}</Text>
+            <Text style={styles.answerDetails}>
+              {targetEvent.year} · {targetEvent.state}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -179,6 +207,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   suggestionList: {
+    maxHeight: 240,
     overflow: "hidden",
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
@@ -279,5 +308,49 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
+  },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+  },
+  gameOverModal: {
+    width: "100%",
+    maxWidth: 420,
+    alignItems: "center",
+    padding: 28,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f3",
+  },
+  gameOverTitle: {
+    color: "#202224",
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  gameOverMessage: {
+    marginTop: 12,
+    color: "#60646c",
+    fontSize: 16,
+  },
+  answerImage: {
+    width: 96,
+    height: 96,
+    marginTop: 20,
+    borderRadius: 48,
+    backgroundColor: "#d5d7da",
+  },
+  answerName: {
+    marginTop: 16,
+    color: "#202224",
+    fontSize: 22,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  answerDetails: {
+    marginTop: 8,
+    color: "#60646c",
+    fontSize: 16,
   },
 });

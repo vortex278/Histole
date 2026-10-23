@@ -25,5 +25,5 @@ export const findEventSuggestions = (query: string): EventCard[] => {
     return [];
   }
 
-  return MOCK_EVENTS.filter((event) => event.name.toLowerCase().includes(normalizedQuery)).slice(0, 5);
+  return MOCK_EVENTS.filter((event) => event.name.toLowerCase().includes(normalizedQuery)).slice(0, 10);
 };

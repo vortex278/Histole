@@ -33,6 +33,9 @@ yarn-error.*
 # local env files
 .env*.local
 .venv/
+venv/
+__pycache__/
+*.py[cod]
 
 # typescript
 *.tsbuildinfo
@@ -40,6 +43,10 @@ yarn-error.*
 # test output
 coverage/
 artifacts/
+
+# Local backend database
+backend/data/*.sqlite3
+backend/data/*.sqlite3-journal
 
 example
 
