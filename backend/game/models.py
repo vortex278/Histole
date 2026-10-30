@@ -94,8 +94,9 @@ class GameSession(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(guesses_used__lte=15),
-                name="session_guesses_at_most_15",
+                condition=models.Q(guesses_used__gte=0)
+                & models.Q(guesses_used__lte=15),
+                name="session_guesses_between_0_and_15",
             )
         ]
 
@@ -134,6 +135,36 @@ class Guess(models.Model):
                 condition=models.Q(attempt_number__gte=1)
                 & models.Q(attempt_number__lte=15),
                 name="guess_attempt_between_1_and_15",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    year_status__in=["correct", "close", "incorrect"]
+                ),
+                name="guess_year_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    state_status__in=["correct", "close", "incorrect"]
+                ),
+                name="guess_state_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    era_status__in=["correct", "close", "incorrect"]
+                ),
+                name="guess_era_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    scale_status__in=["correct", "close", "incorrect"]
+                ),
+                name="guess_scale_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    tag_status__in=["correct", "close", "incorrect"]
+                ),
+                name="guess_tag_status_valid",
             ),
         ]
         ordering = ["session", "attempt_number"]

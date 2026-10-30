@@ -2,6 +2,7 @@ from datetime import date
 
 from django.core.management import call_command
 from django.db import IntegrityError
+from django.db import transaction
 from django.test import TestCase
 
 from .models import Event, EventTag, GameSession, Guess
@@ -77,3 +78,59 @@ class SessionTests(TestCase):
 
         with self.assertRaises(IntegrityError):
             Guess.objects.create(**values)
+
+    def test_attempt_number_must_be_between_one_and_fifteen(self):
+        target = Event.objects.get(event_name="Moon Landing")
+        session = GameSession.objects.create(
+            played_on=date(2026, 10, 19),
+            target_event=target,
+        )
+        values = {
+            "session": session,
+            "guessed_event": target,
+            "year_status": "correct",
+            "state_status": "correct",
+            "era_status": "correct",
+            "scale_status": "correct",
+            "tag_status": "correct",
+        }
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Guess.objects.create(attempt_number=0, **values)
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Guess.objects.create(attempt_number=16, **values)
+
+    def test_feedback_statuses_must_be_valid(self):
+        target = Event.objects.get(event_name="Moon Landing")
+        session = GameSession.objects.create(
+            played_on=date(2026, 10, 19),
+            target_event=target,
+        )
+        values = {
+            "session": session,
+            "attempt_number": 1,
+            "guessed_event": target,
+            "year_status": "invalid",
+            "state_status": "correct",
+            "era_status": "correct",
+            "scale_status": "correct",
+            "tag_status": "correct",
+        }
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Guess.objects.create(**values)
+
+    def test_session_guess_count_must_not_exceed_fifteen(self):
+        target = Event.objects.get(event_name="Moon Landing")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                GameSession.objects.create(
+                    played_on=date(2026, 10, 19),
+                    target_event=target,
+                    guesses_used=16,
+                )

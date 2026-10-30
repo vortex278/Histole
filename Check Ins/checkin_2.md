@@ -2,42 +2,120 @@
 
 *Due November 1st*
 
-## Purpose and scope
+**Focus: Normalization up to 3NF, anomaly resolution, ER modeling, and data integrity.**
 
-The first check-in described Histole as a guessing game backed by an event catalog. The
-frontend now uses 29 in-memory events in `src/game/mock-events.ts`, including the five
-original prototype events, while the backend seed catalog contains 60 events. The new
-design supports:
+## What changed since Check-in 1
 
-- the historical event catalog and its reusable descriptive values;
-- events with more than one tag, even though the current UI displays one tag;
-- anonymous game sessions and the guesses made in each session; and
-- integrity rules that prevent duplicate names, invalid category references, and
-  duplicate attempts.
+In the first check-in, I planned on having five tables:
 
-Accounts, authentication, and long-term player statistics remain future features. A
-session can therefore be created without a user table. Adding a user later will not
-require restructuring the event catalog.
+EVENT, STATE, ERA, SCALE, and TAG
+
+That design made sense for the first version of the game, but it had a few problems once I started thinking about the app more seriously. The biggest problem was that an event could only have one tag. I also had nowhere to save which event was the target for a round or what guesses the player made.
+
+For this check-in, I expanded the database to include:
+
+- The historical event catalog and its reusable category values.
+- Multiple tags for an event through a separate relationship table.
+- Anonymous game sessions and the guesses made during each session.
+- Integrity rules to prevent duplicate names, invalid category references, and
+  duplicate attempt numbers.
+
+The frontend currently has 29 in-memory events in `src/game/mock-events.ts`. The backend seed command has 60 events, including the five events from the original prototype. The Expo app is still using the in-memory repository for now. Connecting the mobile app to the backend is planned for Check-in 3. I am also leaving accounts, authentication, long-term statistics, and streaks for later. A game session can be created without a user table, and adding a user table later should not require changing the event catalog.
 
 ## Schema evolution
 
-The initial design placed one foreign key for each category directly on `Event`. That
-works for the current prototype, but `tag_id` permits only one tag per event. It also
-does not record which event was the target of a particular round or which guesses were
-made. The expanded design keeps the reusable lookup tables and adds:
+The original design placed one foreign key for each category directly on the EVENT table. That worked while every event had exactly one tag, but it does not work as well if an event needs multiple tags. It also mixes the event catalog with information about a particular game round.
 
-| New relation | Reason |
+The updated design keeps the original lookup tables and adds three relations:
+
+| New relation | Why I added it |
 | --- | --- |
-| `EventTag` | Resolves the many-to-many relationship between events and tags. |
-| `GameSession` | Records a round's date, target event, and outcome. |
-| `Guess` | Records each selected event and its attempt number within a round. |
+| EVENT_TAG | Allows an event to have multiple tags without repeating the event row. |
+| GAME_SESSION | Saves the date, target event, and result of a game round. |
+| GUESS | Saves the event selected and the attempt number for each guess. |
 
-The application can still show the first or primary tag in its current card-shaped
-view. The database is no longer forced to discard additional tags.
+The current UI can still display the first or primary tag in its event card. The difference is that the database is no longer forced to throw away other tags if I add them later.
+
+### Entity-Relationship diagram
+
+```mermaid
+erDiagram
+    STATE ||--o{ EVENT : contains
+    ERA ||--o{ EVENT : classifies
+    SCALE ||--o{ EVENT : describes
+    EVENT ||--o{ EVENT_TAG : has
+    TAG ||--o{ EVENT_TAG : labels
+    EVENT ||--o{ GAME_SESSION : targets
+    GAME_SESSION ||--o{ GUESS : records
+    EVENT ||--o{ GUESS : selected
+
+    STATE {
+        int state_id PK
+        string state_name UK
+        string abbreviation UK
+    }
+    ERA {
+        int era_id PK
+        string era_name UK
+        int start_year
+        int end_year
+    }
+    SCALE {
+        int scale_id PK
+        string scale_name UK
+        int display_order UK
+    }
+    TAG {
+        int tag_id PK
+        string tag_name UK
+    }
+    EVENT {
+        int event_id PK
+        string event_name UK
+        int event_year
+        int state_id FK
+        int era_id FK
+        int scale_id FK
+        string description
+        string image_url
+    }
+    EVENT_TAG {
+        int event_id PK, FK
+        int tag_id PK, FK
+    }
+    GAME_SESSION {
+        int session_id PK
+        date played_on
+        int target_event_id FK
+        int guesses_used
+        boolean solved
+    }
+    GUESS {
+        int guess_id PK
+        int session_id FK
+        int attempt_number
+        int guessed_event_id FK
+        string year_status
+        string state_status
+        string era_status
+        string scale_status
+        string tag_status
+    }
+```
+
+The main relationships are:
+
+- One STATE can be connected to many EVENT rows.
+- One ERA can be connected to many EVENT rows.
+- One SCALE can be connected to many EVENT rows.
+- EVENT and TAG have a many-to-many relationship through EVENT_TAG.
+- One EVENT can be the target of many GAME_SESSION rows.
+- One GAME_SESSION can have many GUESS rows.
+- Each GUESS points to the EVENT selected by the player.
 
 ## Normalization demonstration
 
-To make each stage comparable, the following sample facts are used throughout:
+To keep the examples consistent, I used the same five events from the prototype throughout the normalization steps:
 
 | Event | Year | State | Era | Scale | Tag |
 | --- | ---: | --- | --- | --- | --- |
@@ -47,23 +125,19 @@ To make each stage comparable, the following sample facts are used throughout:
 | Moon Landing | 1969 | Florida | Modern Era | International | Science |
 | Louisiana Purchase | 1803 | Louisiana | New Nation | International | Expansion |
 
-These values match the current prototype. The original UI represents one tag per
-`EventCard`; the normalized schema below is prepared for adding another tag later.
+These are the same basic facts used by the current prototype. The first version of the UI only represents one tag per event, but the new database design is ready for more than one.
 
-### Starting relation: an unnormalized design
+### Starting relation: early unnormalized design
 
-An early all-in-one design might have stored an event and all of its lookup
-descriptions in one row:
+An early version could have stored everything in one large table:
 
 `EVENT_RECORD(event_id, event_name, event_year, state_id, state_name, state_abbreviation, era_id, era_name, era_start_year, era_end_year, scale_id, scale_name, tag_id, tag_name, description, image_url)`
 
-The original five-table design allowed one tag per event. The new schema preserves
-that sample fact while making it possible to add more tags through `EventTag` later.
-This is the unnormalized starting point, not the final schema.
+This would put the event information and all of the lookup descriptions in the same row. It is easy to understand at first, but it creates repeated data. For example, Pennsylvania would be copied into every event that happened there. The original five-table design improved this by separating STATE, ERA, SCALE, and TAG. However, the original EVENT table still had one `tag_id`, so it could not properly represent multiple tags.
 
 ### First Normal Form (1NF)
 
-To reach 1NF, each field contains one value and each row describes one event:
+To get to 1NF, every field should contain one atomic value, and every row should describe one event. The relation would look like this:
 
 `EVENT_1NF(event_id, event_name, event_year, state_id, state_name, state_abbreviation, era_id, era_name, era_start_year, era_end_year, scale_id, scale_name, tag_id, tag_name, description, image_url)`
 
@@ -72,29 +146,22 @@ To reach 1NF, each field contains one value and each row describes one event:
 | 1 | California Gold Rush | 1849 | 1 | California | 4 | National Expansion | 5 | International | 1 | Migration |
 | 2 | Declaration of Independence | 1776 | 2 | Pennsylvania | 2 | American Revolution | 5 | International | 2 | Politics |
 | 3 | Battle of Gettysburg | 1863 | 2 | Pennsylvania | 5 | Civil War | 4 | National | 3 | Military |
-| 4 | Moon Landing | 1969 | 3 | Florida | 10 | Modern Era | 5 | International | 4 | Science |
+| 4 | Moon Landing | 1969 | 3 | Florida | 9 | Modern Era | 5 | International | 4 | Science |
 | 5 | Louisiana Purchase | 1803 | 4 | Louisiana | 3 | New Nation | 5 | International | 5 | Expansion |
 
-Every value is atomic, so the relation is in 1NF. Because this version still has one
-tag per event, `event_id` is a candidate key at this stage. The future many-to-many
-extension changes the association's key to `(event_id, tag_id)` in `EventTag`.
+Every value in this table is atomic, so this version meets 1NF. Since there is only one tag per event in this sample, `event_id` can be used as the candidate key. The problem appears when I support multiple tags. If I repeat the event row for each tag, the key would become `(event_id, tag_id)`. That would mean all the event details get repeated every time another tag is added.
 
 ### Second Normal Form (2NF)
 
-The key of `EVENT_1NF` is `event_id`, so there are no partial dependencies: 1NF is
-already in 2NF for this one-tag sample. This is an important intermediate result,
-not a skipped step. The design still has repeated lookup facts and will need a 3NF
-decomposition. If multiple tags were stored by repeating an event row, the natural
-key would become `(event_id, tag_id)` and the following partial dependencies would
-appear:
+The one-tag version is already in 2NF because its key is only `event_id`. There are no partial dependencies when the key has only one column. I did not skip 2NF; the result for this specific sample is that it already satisfies 2NF. However, the future multi-tag version has a composite key of `(event_id, tag_id)`. In that version:
 
-- `event_name`, `event_year`, `state_id`, `era_id`, `scale_id`, `description`, and
-  `image_url` depend only on `event_id`;
-- `tag_name` depends only on `tag_id`; and
-- the association itself depends on both `event_id` and `tag_id`.
+- `event_name`, `event_year`, `state_id`, `era_id`, `scale_id`, `description`,
+  and `image_url` depend only on `event_id`.
+- `tag_name` depends only on `tag_id`.
+- The association between an event and a tag depends on both `event_id` and
+  `tag_id`.
 
-Those partial dependencies would violate 2NF. The planned many-to-many extension is
-therefore represented as:
+The first two groups are partial dependencies because they depend on only part of the composite key. To remove those dependencies, I separated the event details, tag details, and event-tag relationship:
 
 ```text
 EVENT_2NF(
@@ -109,19 +176,13 @@ EVENT_TAG_2NF(
 )
 ```
 
-For the current sample, each event has one row in `EVENT_2NF` and one association
-in `EVENT_TAG_2NF`. If an additional tag is added later, only another association
-row is inserted; no event details are duplicated.
+For the current sample, every event has one EVENT_2NF row and one EVENT_TAG_2NF row. If I add another tag later, I only need to insert another EVENT_TAG_2NF row. I do not have to duplicate the event name, year, state, or description.
 
-At this stage, every non-key attribute depends on the whole key of its relation.
-However, `EVENT_2NF` still stores descriptions of referenced lookup values, such as
-`state_name` and `scale_name`, if those columns are carried forward from the
-all-in-one table. Those are transitive dependencies.
+At this point, the partial dependencies are fixed. However, if the descriptive lookup columns from the original table are still stored in EVENT_2NF, there are still transitive dependencies. For example, `state_name` is really determined by `state_id`, not directly by `event_id`. Removing those dependencies is the next step.
 
 ### Third Normal Form (3NF)
 
-Remove the transitive dependencies by putting each reusable concept in its own
-relation:
+To reach 3NF, I moved each reusable concept into its own table:
 
 ```text
 STATE(state_id PK, state_name UK, abbreviation UK)
@@ -129,18 +190,15 @@ ERA(era_id PK, era_name UK, start_year, end_year)
 SCALE(scale_id PK, scale_name UK, display_order UK)
 TAG(tag_id PK, tag_name UK)
 EVENT(
-  event_id PK, event_name UK, event_year, state_id FK, era_id FK,
-  scale_id FK, description, image_url
+  event_id PK, event_name UK, event_year, state_id FK,
+  era_id FK, scale_id FK, description, image_url
 )
 EVENT_TAG(event_id PK/FK, tag_id PK/FK)
 ```
 
-For example, `state_id = 2` is stored once as Pennsylvania. Events 2 and 3 both
-reference it, rather than repeating the spelling and abbreviation. `era_name`,
-`start_year`, and `end_year` are attributes of an era identified by `era_id`, not
-attributes of every event in that era.
+For example, `state_id = 2` represents Pennsylvania. The Declaration of Independence and the Battle of Gettysburg can both reference that one STATE row. The spelling and abbreviation do not need to be copied into both EVENT rows. The same idea applies to ERA and SCALE. `era_name`, `start_year`, and `end_year` describe an era, so they belong in ERA instead of being repeated for every event in that era.
 
-The final gameplay relations are also in 3NF:
+The gameplay tables are also separate from the event catalog:
 
 ```text
 GAME_SESSION(session_id PK, played_on, target_event_id FK, guesses_used, solved)
@@ -150,15 +208,13 @@ GUESS(
 )
 ```
 
-In `GAME_SESSION`, the session identifier determines every session attribute. In
-`GUESS`, `guess_id` determines the recorded result, while the unique constraint on
-`(session_id, attempt_number)` enforces the gameplay rule. No non-key result column
-determines another non-key column. The statuses are a snapshot of the feedback shown
-for that attempt; they are not category descriptions copied from `Event`.
+The session ID determines the information about a game round. The guess ID determines the information about one recorded guess. The unique constraint on `(session_id, attempt_number)` makes sure that the same round cannot have two different guesses with the same attempt number.
+
+The statuses in GUESS are a snapshot of the feedback shown for that attempt. They are not copies of the event's category descriptions, so they do not create another dependency inside EVENT.
 
 ## Functional dependencies
 
-The principal dependencies are:
+These are the main functional dependencies I used while designing the tables:
 
 ```text
 event_id -> event_name, event_year, state_id, era_id, scale_id, description, image_url
@@ -172,48 +228,51 @@ guess_id -> session_id, attempt_number, guessed_event_id, all five statuses
 (session_id, attempt_number) -> guess_id, guessed_event_id, all five statuses
 ```
 
-The first line is why event details belong in `EVENT`; the next four lines are why
-lookup descriptions do not belong there. The composite dependency explains the
-`EVENT_TAG` junction table. The final dependencies explain why a session and its
-attempts are separate relations.
+The first dependency shows why the event details belong in EVENT. The next four show why the state, era, scale, and tag descriptions belong in their own lookup tables. The `(event_id, tag_id)` dependency explains why EVENT_TAG is only an association table. It does not need to store another copy of the event or tag name.
+
+The Django implementation gives EVENT_TAG an automatic `id` column as well. The pair `(event_id, tag_id)` is still the unique business key because the database prevents the same event-tag pair from being inserted twice.
+
+The final dependencies explain why I kept GAME_SESSION and GUESS separate. A target event is a fact about one round, while the event itself is a permanent catalog fact.
 
 ## Anomalies in the early design
 
 ### Update anomaly
 
-In the all-in-one table, Pennsylvania appears in both the Declaration of
-Independence and Battle of Gettysburg rows. If its abbreviation or spelling were
-corrected, every matching event row would need an update. Missing one row would make
-the database disagree with itself. In 3NF, the correction is made once in `STATE`.
+In the all-in-one table, Pennsylvania appears in both the Declaration of Independence row and the Battle of Gettysburg row. If the spelling or abbreviation for Pennsylvania needed to be corrected, every matching event row would need to be updated.
+
+If I forgot to update one row, the database would contain two different versions of Pennsylvania. In the 3NF design, I update the one row in STATE and all events automatically reference the corrected value.
 
 ### Insertion anomaly
 
-The first design cannot add a new tag such as `Civil Rights` until an event uses it,
-because the tag name is stored inside an event row. The separate `TAG` table can
-accept a valid tag before an event is associated with it. Similarly, an empty
-catalog does not prevent the lookup tables from being seeded.
+In the first design, I could not add a new tag such as `Civil Rights` unless I also had an event using that tag. The tag name was stored inside an event row, so a tag could not exist by itself.
+
+With the separate TAG table, I can insert `Civil Rights` before any event is associated with it. The same idea applies to the other lookup tables. I can seed valid states, eras, and scales even before the event catalog is full.
 
 ### Deletion anomaly
 
-If the only event labeled `Science` were deleted from the all-in-one table, the
-database would also lose the fact that `Science` is a valid tag. In the normalized
-design, deleting Moon Landing removes its `EVENT_TAG` association, but the `Science`
-row remains in `TAG`.
+If Moon Landing were the only event with the `Science` tag, deleting Moon Landing from the all-in-one table would also delete the only record that Science is a valid tag.
+
+In the normalized design, deleting the event removes its EVENT_TAG association, but the `Science` row stays in TAG. The database does not lose the fact that Science is a valid category.
 
 ### Gameplay anomaly
 
-Without `GAME_SESSION` and `GUESS`, the application can calculate feedback in memory
-but cannot reliably answer which target was used, how many attempts a player made, or
-which event was guessed on attempt 3. Putting repeated guess columns into `EVENT`
-would mix catalog facts with round facts. The separate relations preserve that
-boundary.
+The original event catalog does not know which event was the target of a particular round. It also cannot reliably tell me what event was guessed on attempt 3 or how many guesses the player used.
+
+I could put guess columns directly into EVENT, but that would mix permanent catalog facts with temporary game-round facts. GAME_SESSION and GUESS keep those responsibilities separate. This also gives me a better foundation for future statistics without denormalizing the event catalog.
 
 ## Integrity constraints and representative SQL
 
-The following schema is the implementation target. `CHECK` constraints enforce
-domain rules, foreign keys enforce relationships, and uniqueness constraints prevent
-duplicate business values. The exact SQL dialect can be adapted to the eventual
-backend, but the relational structure is independent of the mobile framework.
+The database needs more than just separate tables. It also needs rules that prevent bad data. The main rules are:
+
+- Names and abbreviations should be unique.
+- Foreign keys should point to existing category and event rows.
+- An era cannot end before it starts.
+- An event-tag pair cannot be duplicated.
+- A session can have no more than 15 guesses.
+- An attempt number must be between 1 and 15.
+- Feedback statuses must be `correct`, `close`, or `incorrect`.
+
+This is the representative SQL schema:
 
 ```sql
 CREATE TABLE State (
@@ -294,8 +353,7 @@ CREATE TABLE Guess (
 );
 ```
 
-For a multi-tag comparison, the application can use a join rather than comparing a
-single copied tag value:
+For a multi-tag comparison, the application can find tags shared by the guessed event and the target event with a join:
 
 ```sql
 SELECT t.tag_name
@@ -309,19 +367,12 @@ JOIN Tag AS t ON t.tag_id = et.tag_id
 WHERE et.event_id = :target_event_id;
 ```
 
-## Reflection on the troubleshooting process
+## Troubleshooting and reflection
 
-The main design problem was initially treating every event category as a single
-property of an event. That matched the first UI but made the database responsible for
-the UI's current limitation. I first listed what each identifier actually determined,
-then checked whether a value could be reused by another event. That exposed the
-partial dependency on the event/tag composite key and the transitive dependencies
-through state, era, and scale.
+The main problem I ran into was treating every category as a single property of an event. That matched the first UI, but it made the database copy information and limited each event to one tag.
 
-I also separated catalog facts from play-session facts. A target event is a property
-of a particular round, not a permanent property of the event itself. Recording
-guesses separately made the 15-guess rule enforceable and made future statistics
-possible without denormalizing the catalog. The resulting 3NF design uses more tables
-than the first check-in, but each table has one clear responsibility, and the
-insertion, deletion, and update anomalies have a direct place where they are
-resolved.
+I started by listing what each identifier actually determined. Then I checked which values could be reused by other events. That made the repeated state, era, scale, and tag information easier to see. It also showed why repeating an event row for every tag would create partial dependencies.
+
+I also had to separate catalog information from game-session information. A target event is not permanently a property of the event itself. It is a property of a specific round. The same is true for guesses and feedback.
+
+The final design uses more tables than my first check-in, but each table has a more specific job. EVENT stores historical events, the lookup tables store reusable category information, EVENT_TAG handles multiple tags, and the session tables store gameplay. The integrity constraints and tests also make the 15-guess rule and duplicate-attempt rule enforceable instead of just something the frontend is expected to remember.
