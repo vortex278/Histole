@@ -3,6 +3,7 @@ from datetime import date
 from django.core.management import call_command
 from django.db import IntegrityError
 from django.db import transaction
+from django.test import Client
 from django.test import TestCase
 
 from .models import Event, EventTag, GameSession, Guess
@@ -16,7 +17,7 @@ class CatalogTests(TestCase):
     def test_seed_contains_prototype_events_and_relationships(self):
         gold_rush = Event.objects.get(event_name="California Gold Rush")
 
-        self.assertEqual(Event.objects.count(), 60)
+        self.assertGreaterEqual(Event.objects.count(), 135)
         self.assertEqual(
             list(gold_rush.tags.values_list("tag_name", flat=True)),
             ["Migration"],
@@ -29,6 +30,108 @@ class CatalogTests(TestCase):
 
         with self.assertRaises(IntegrityError):
             EventTag.objects.create(event=gold_rush, tag=migration)
+
+    def test_tragedy_tag_categorizes_tragic_events(self):
+        self.assertEqual(
+            Event.objects.get(event_name="Oklahoma City Bombing")
+            .tags.get()
+            .tag_name,
+            "Tragedy",
+        )
+        self.assertEqual(
+            Event.objects.get(event_name="California Gold Rush")
+            .tags.get()
+            .tag_name,
+            "Migration",
+        )
+
+    def test_events_api_returns_normalized_catalog(self):
+        response = Client().get("/api/events", headers={"Origin": "http://localhost:8081"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers["Access-Control-Allow-Origin"],
+            "http://localhost:8081",
+        )
+        self.assertGreaterEqual(len(response.json()["events"]), 135)
+        self.assertIn(
+            "California Gold Rush",
+            [event["name"] for event in response.json()["events"]],
+        )
+        self.assertIn(
+            "Seneca Falls Convention",
+            [event["name"] for event in response.json()["events"]],
+        )
+        self.assertIn(
+            "Watergate Break-in",
+            [event["name"] for event in response.json()["events"]],
+        )
+        self.assertIn(
+            "Kansas Statehood",
+            [event["name"] for event in response.json()["events"]],
+        )
+
+    def test_api_allows_browser_preflight(self):
+        response = Client().options(
+            "/api/sessions",
+            headers={
+                "Origin": "http://localhost:8081",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.headers["Access-Control-Allow-Methods"], "GET, POST, OPTIONS")
+
+    def test_api_allows_expo_dynamic_localhost_port(self):
+        response = Client().get(
+            "/api/events",
+            headers={"Origin": "http://localhost:8082"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers["Access-Control-Allow-Origin"],
+            "http://localhost:8082",
+        )
+
+    def test_session_and_guess_api_persists_validated_gameplay(self):
+        client = Client()
+        session_response = client.post("/api/sessions", data={}, content_type="application/json")
+        session_id = session_response.json()["sessionId"]
+        target_id = session_response.json()["target"]["eventId"]
+        guess = Event.objects.exclude(pk=target_id).first()
+
+        response = client.post(
+            f"/api/sessions/{session_id}/guesses",
+            data={"guessedEventId": guess.id},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["attemptNumber"], 1)
+        self.assertEqual(GameSession.objects.get(pk=session_id).guesses_used, 1)
+
+    def test_guess_api_rejects_duplicate_guesses(self):
+        client = Client()
+        session_response = client.post("/api/sessions", data={}, content_type="application/json")
+        session_id = session_response.json()["sessionId"]
+        guess_id = Event.objects.first().id
+        payload = {"guessedEventId": guess_id}
+
+        client.post(
+            f"/api/sessions/{session_id}/guesses",
+            data=payload,
+            content_type="application/json",
+        )
+        response = client.post(
+            f"/api/sessions/{session_id}/guesses",
+            data=payload,
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("already been guessed", response.json()["error"])
 
 
 class SessionTests(TestCase):

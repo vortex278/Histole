@@ -1,7 +1,8 @@
 import { Image } from "expo-image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
+import { createSession, fetchEvents, submitGuess } from "@/game/api";
 import {
     EventCard,
     getAttributeColor,
@@ -11,30 +12,55 @@ import {
     getTagStatus,
     getYearStatus,
 } from "@/game/event-logic";
-import { findEventByName, findEventSuggestions, getDailyTarget } from "@/game/event-repository";
 
 export default function Index() {
-  const targetEvent = getDailyTarget();
+  const [targetEvent, setTargetEvent] = useState<EventCard>();
+  const [sessionId, setSessionId] = useState<number>();
+  const [events, setEvents] = useState<EventCard[]>([]);
   const [guessText, setGuessText] = useState("");
   const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
   const [guesses, setGuesses] = useState<EventCard[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isGameWon, setIsGameWon] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
   const maxGuesses = 15;
   const isGameLost = guesses.length >= maxGuesses && !isGameWon;
   const isGameOver = isGameWon || isGameLost;
-  const eventSuggestions = findEventSuggestions(guessText);
-  const submitGuess = () => {
+  const eventSuggestions = events.filter((event) =>
+    event.name.toLowerCase().includes(guessText.trim().toLowerCase()),
+  ).slice(0, 10);
+
+  useEffect(() => {
+    const loadGame = async () => {
+      try {
+        const catalog = await fetchEvents();
+        const session = await createSession();
+        setEvents(catalog);
+        setTargetEvent(session.target);
+        setSessionId(session.sessionId);
+      } catch (error) {
+        setApiError(error instanceof Error ? error.message : "Unable to connect to the game server.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void loadGame();
+  }, []);
+
+  const submitGuessForGame = async () => {
     setIsSuggestionVisible(false);
 
-    if (isGameOver) {
+    if (isGameOver || !sessionId || !targetEvent) {
       return;
     }
 
-    const nextEvent = findEventByName(guessText);
+    const nextEvent = events.find(
+      (event) => event.name.toLowerCase() === guessText.trim().toLowerCase(),
+    );
 
     if (!nextEvent) {
-      setErrorMessage("Choose an event from the mock event catalog.");
+      setErrorMessage("Choose an event from the event suggestions.");
       return;
     }
 
@@ -43,23 +69,29 @@ export default function Index() {
       return;
     }
 
-    setGuesses((previousGuesses) => [
-      nextEvent,
-      ...previousGuesses,
-    ]);
-
-    if (nextEvent.eventId === targetEvent.eventId) {
-      setIsGameWon(true);
+    try {
+      const result = await submitGuess(sessionId, nextEvent.eventId);
+      setGuesses((previousGuesses) => [nextEvent, ...previousGuesses]);
+      setIsGameWon(result.solved);
+      setGuessText("");
+      setErrorMessage("");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to submit your guess.");
     }
-
-    setGuessText("");
-    setErrorMessage("");
   };
   const selectSuggestion = (eventName: string) => {
     setGuessText(eventName);
     setIsSuggestionVisible(false);
     setErrorMessage("");
   };
+
+  if (isLoading) {
+    return <View style={styles.centered}><Text style={styles.title}>Loading Histole...</Text></View>;
+  }
+
+  if (apiError || !targetEvent) {
+    return <View style={styles.centered}><Text style={styles.errorMessage}>{apiError || "Game data is unavailable."}</Text></View>;
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -79,7 +111,7 @@ export default function Index() {
           placeholder="Enter your guess"
           placeholderTextColor="#8f9498"
           returnKeyType="done"
-          onSubmitEditing={submitGuess}
+          onSubmitEditing={submitGuessForGame}
           editable={!isGameOver}
         />
         {isSuggestionVisible && eventSuggestions.length > 0 && (
@@ -101,7 +133,7 @@ export default function Index() {
         )}
       </View>}
       {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
-      {!isGameWon && <Pressable style={styles.button} onPress={submitGuess} disabled={isGameOver}>
+      {!isGameWon && <Pressable style={styles.button} onPress={submitGuessForGame} disabled={isGameOver}>
         <Text style={styles.buttonText}>Submit Guess</Text>
       </Pressable>}
       {isGameWon && <Text style={styles.successMessage}>You got it! Today&apos;s event is {targetEvent.name}.</Text>}
@@ -174,6 +206,13 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2f3234",
+    padding: 24,
+  },
   screen: {
     flex: 1,
     backgroundColor: "#2f3234",

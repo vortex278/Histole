@@ -2,11 +2,15 @@ from datetime import date
 
 from django.core.management.base import BaseCommand
 
+from game.loc_events import LOC_EVENTS, REMOVED_LOC_EVENT_NAMES
+from game.kansas_events import KANSAS_EVENTS
 from game.models import Era, Event, EventTag, Scale, State, Tag
+from game.wikipedia_events import WIKIPEDIA_EVENTS
+from game.tragedy_events import TRAGEDY_EVENT_NAMES
 
 
 class Command(BaseCommand):
-    help = "Seed the normalized Histole catalog with the a lot of prototype events hopefully if i have time and don't forget lol so insert the number of events here at the end []."
+    help = "Seed the normalized Histole catalog with prototype events."
 
     def handle(self, *args, **options):
         states = {
@@ -99,7 +103,14 @@ class Command(BaseCommand):
         }
         tags = {
             name: Tag.objects.get_or_create(tag_name=name)[0]
-            for name in ["Expansion", "Migration", "Military", "Politics", "Science"]
+            for name in [
+                "Expansion",
+                "Migration",
+                "Military",
+                "Politics",
+                "Science",
+                "Tragedy",
+            ]
         }
         events = [
             (
@@ -577,7 +588,19 @@ class Command(BaseCommand):
                 "Military",
             ),
         ]
+        Event.objects.filter(event_name__in=REMOVED_LOC_EVENT_NAMES).delete()
+        events.extend(LOC_EVENTS)
+        events.extend(WIKIPEDIA_EVENTS)
+        events.extend(KANSAS_EVENTS)
+        valid_state_names = set(states)
         for name, year, state, era, scale, tag in events:
+            if state not in valid_state_names:
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"Skipping {name}: {state} is not in the state catalog."
+                    )
+                )
+                continue
             event = Event.objects.update_or_create(
                 event_name=name,
                 defaults={
@@ -587,7 +610,7 @@ class Command(BaseCommand):
                     "scale": scales[scale],
                 },
             )[0]
-            EventTag.objects.get_or_create(event=event, tag=tags[tag])
+            event.tags.set([tags["Tragedy"] if name in TRAGEDY_EVENT_NAMES else tags[tag]])
 
         self.stdout.write(
             self.style.SUCCESS(
