@@ -8,7 +8,10 @@ SECRET_KEY = "histole-development-only"
 DEBUG = True
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS",
+        "localhost,127.0.0.1,10.0.2.2",
+    ).split(",")
     if host.strip()
 ]
 

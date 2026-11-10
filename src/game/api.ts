@@ -21,7 +21,16 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
     headers: { "Content-Type": "application/json" },
     ...init,
   });
-  const body = await response.json() as T & { error?: string };
+  const responseText = await response.text();
+  let body: T & { error?: string };
+
+  try {
+    body = JSON.parse(responseText) as T & { error?: string };
+  } catch {
+    throw new Error(
+      `API returned a non-JSON response (${response.status}). Check that Django is running at ${API_BASE_URL}.`,
+    );
+  }
 
   if (!response.ok) {
     throw new Error(body.error ?? `API request failed (${response.status}).`);
