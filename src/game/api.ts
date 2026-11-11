@@ -4,15 +4,17 @@ import { API_BASE_URL } from "@/constants/api";
 type EventsResponse = { events: EventCard[] };
 type SessionResponse = { sessionId: number; target: EventCard };
 
+export type GuessStatuses = {
+  year: "correct" | "close" | "incorrect";
+  state: "correct" | "close" | "incorrect";
+  era: "correct" | "close" | "incorrect";
+  scale: "correct" | "close" | "incorrect";
+  tag: "correct" | "close" | "incorrect";
+};
+
 export type GuessResponse = {
   event: EventCard;
-  statuses: {
-    year: "correct" | "close" | "incorrect";
-    state: "correct" | "close" | "incorrect";
-    era: "correct" | "close" | "incorrect";
-    scale: "correct" | "close" | "incorrect";
-    tag: "correct" | "close" | "incorrect";
-  };
+  statuses: GuessStatuses;
   solved: boolean;
 };
 

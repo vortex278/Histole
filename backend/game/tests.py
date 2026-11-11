@@ -1,4 +1,6 @@
 from datetime import date
+import json
+from pathlib import Path
 
 from django.core.management import call_command
 from django.db import IntegrityError
@@ -6,7 +8,7 @@ from django.db import transaction
 from django.test import Client
 from django.test import TestCase
 
-from .models import Event, EventTag, GameSession, Guess
+from .models import Event, GameSession, Guess
 
 
 class CatalogTests(TestCase):
@@ -14,34 +16,27 @@ class CatalogTests(TestCase):
     def setUpTestData(cls):
         call_command("seed_game", verbosity=0)
 
-    def test_seed_contains_prototype_events_and_relationships(self):
+    def test_seed_contains_prototype_events_and_tag_assignments(self):
         gold_rush = Event.objects.get(event_name="California Gold Rush")
 
         self.assertGreaterEqual(Event.objects.count(), 135)
         self.assertEqual(
-            list(gold_rush.tags.values_list("tag_name", flat=True)),
-            ["Migration"],
+            gold_rush.tag.tag_name,
+            "Migration",
         )
         self.assertEqual(gold_rush.state.state_name, "California")
 
-    def test_event_tag_pair_is_unique(self):
+    def test_event_has_one_tag(self):
         gold_rush = Event.objects.get(event_name="California Gold Rush")
-        migration = gold_rush.tags.get(tag_name="Migration")
-
-        with self.assertRaises(IntegrityError):
-            EventTag.objects.create(event=gold_rush, tag=migration)
+        self.assertEqual(gold_rush.tag.tag_name, "Migration")
 
     def test_tragedy_tag_categorizes_tragic_events(self):
         self.assertEqual(
-            Event.objects.get(event_name="Oklahoma City Bombing")
-            .tags.get()
-            .tag_name,
+            Event.objects.get(event_name="Oklahoma City Bombing").tag.tag_name,
             "Tragedy",
         )
         self.assertEqual(
-            Event.objects.get(event_name="California Gold Rush")
-            .tags.get()
-            .tag_name,
+            Event.objects.get(event_name="California Gold Rush").tag.tag_name,
             "Migration",
         )
 
@@ -61,6 +56,10 @@ class CatalogTests(TestCase):
             "California Gold Rush",
             [event["name"] for event in response.json()["events"]],
         )
+        self.assertTrue(
+            Event.objects.get(event_name="Pennsylvania Colony Established").description
+        )
+        self.assertIn("description", response.json()["events"][0])
         self.assertIn(
             "Seneca Falls Convention",
             [event["name"] for event in response.json()["events"]],
@@ -73,6 +72,26 @@ class CatalogTests(TestCase):
             "Kansas Statehood",
             [event["name"] for event in response.json()["events"]],
         )
+        event = next(
+            event
+            for event in response.json()["events"]
+            if event["name"] == "California Gold Rush"
+        )
+        self.assertEqual(event["eraStartYear"], 1815)
+        self.assertEqual(event["eraEndYear"], 1860)
+        self.assertEqual(event["scaleOrder"], 5)
+
+    def test_image_manifest_entries_have_required_review_metadata(self):
+        manifest_path = Path(__file__).resolve().parent / "event_images.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))["events"]
+
+        for image_data in manifest:
+            self.assertIn(image_data.get("status"), {"mapped", "unmapped"})
+            if image_data.get("status") == "mapped":
+                self.assertTrue(image_data.get("imageUrl"))
+                self.assertTrue(image_data.get("sourcePageUrl"))
+                self.assertTrue(image_data.get("license"))
+                self.assertTrue(image_data.get("credit"))
 
     def test_api_allows_browser_preflight(self):
         response = Client().options(
@@ -114,6 +133,34 @@ class CatalogTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["attemptNumber"], 1)
         self.assertEqual(GameSession.objects.get(pk=session_id).guesses_used, 1)
+
+    def test_guess_api_persists_close_statuses(self):
+        client = Client()
+        target = Event.objects.get(event_name="Declaration of Independence")
+        guess = Event.objects.get(event_name="Battle of Trenton")
+        session = GameSession.objects.create(
+            played_on=date(2026, 11, 11),
+            target_event=target,
+        )
+
+        response = client.post(
+            f"/api/sessions/{session.id}/guesses",
+            data={"guessedEventId": guess.id},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["statuses"],
+            {
+                "year": "correct",
+                "state": "close",
+                "era": "correct",
+                "scale": "correct",
+                "tag": "incorrect",
+            },
+        )
+        self.assertEqual(session.guesses.get().state_status, "close")
 
     def test_guess_api_rejects_duplicate_guesses(self):
         client = Client()

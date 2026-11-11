@@ -2,17 +2,19 @@ import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { createSession, fetchEvents, submitGuess } from "@/game/api";
+import { createSession, fetchEvents, GuessStatuses, submitGuess } from "@/game/api";
 import {
     EventCard,
+    findEventByName,
     getAttributeColor,
-    getEraStatus,
-    getScaleStatus,
-    getStateStatus,
-    getTagStatus,
+    getStateDirection,
     getYearDirection,
-    getYearStatus,
 } from "@/game/event-logic";
+
+type GuessCard = {
+  event: EventCard;
+  statuses: GuessStatuses;
+};
 
 export default function Index() {
   const [targetEvent, setTargetEvent] = useState<EventCard>();
@@ -20,9 +22,12 @@ export default function Index() {
   const [events, setEvents] = useState<EventCard[]>([]);
   const [guessText, setGuessText] = useState("");
   const [isSuggestionVisible, setIsSuggestionVisible] = useState(false);
-  const [guesses, setGuesses] = useState<EventCard[]>([]);
+  const [guesses, setGuesses] = useState<GuessCard[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isGameWon, setIsGameWon] = useState(false);
+  const [wonEvent, setWonEvent] = useState<EventCard>();
+  const [isGameOverModalVisible, setIsGameOverModalVisible] = useState(false);
+  const [isWinModalVisible, setIsWinModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState("");
   const maxGuesses = 15;
@@ -56,24 +61,32 @@ export default function Index() {
       return;
     }
 
-    const nextEvent = events.find(
-      (event) => event.name.toLowerCase() === guessText.trim().toLowerCase(),
-    );
+    const nextEvent = findEventByName(events, guessText);
 
     if (!nextEvent) {
       setErrorMessage("Choose an event from the event suggestions.");
       return;
     }
 
-    if (guesses.some((event) => event.eventId === nextEvent.eventId)) {
+    if (guesses.some((guess) => guess.event.eventId === nextEvent.eventId)) {
       setErrorMessage("Event has already been guessed.");
       return;
     }
 
     try {
       const result = await submitGuess(sessionId, nextEvent.eventId);
-      setGuesses((previousGuesses) => [nextEvent, ...previousGuesses]);
+      setGuesses((previousGuesses) => [
+        { event: result.event, statuses: result.statuses },
+        ...previousGuesses,
+      ]);
       setIsGameWon(result.solved);
+      if (result.solved) {
+        setWonEvent(result.event);
+        setIsWinModalVisible(true);
+      }
+      if (!result.solved && guesses.length + 1 >= maxGuesses) {
+        setIsGameOverModalVisible(true);
+      }
       setGuessText("");
       setErrorMessage("");
     } catch (error) {
@@ -138,8 +151,9 @@ export default function Index() {
         <Text style={styles.buttonText}>Submit Guess</Text>
       </Pressable>}
       {isGameWon && <Text style={styles.successMessage}>You got it! Today&apos;s event is {targetEvent.name}.</Text>}
-      {guesses.map((eventCard) => {
+      {guesses.map(({ event: eventCard, statuses }) => {
         const yearDirection = getYearDirection(eventCard.year, targetEvent.year);
+        const stateDirection = getStateDirection(eventCard.state, targetEvent.state);
 
         return (
           <View style={styles.gameCard} key={eventCard.eventId}>
@@ -155,33 +169,54 @@ export default function Index() {
             </View>
 
             <View style={styles.attributeGrid}>
-              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getYearStatus(eventCard.year, targetEvent.year)) }]}>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(statuses.year) }]}>
                 <Text
                   style={styles.attributeValue}
                   accessibilityLabel={`Year ${eventCard.year}${yearDirection === "up" ? ", guess a greater year" : yearDirection === "down" ? ", guess a lesser year" : ""}`}
                 >
                   {eventCard.year}
-                  {yearDirection && <Text style={styles.yearDirection}> {yearDirection === "up" ? "^" : "↓"}</Text>}
+                  {yearDirection && <Text style={styles.yearDirection}> {yearDirection === "up" ? "↑" : "↓"}</Text>}
                 </Text>
                 <Text style={styles.attributeLabel}>Year</Text>
               </View>
 
-              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getStateStatus(eventCard.state, targetEvent.state)) }]}>
-                <Text style={styles.attributeValue}>{eventCard.state}</Text>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(statuses.state) }]}>
+                <Text
+                  style={styles.attributeValue}
+                  accessibilityLabel={`State ${eventCard.state}${stateDirection ? `, target is ${stateDirection}` : ""}`}
+                >
+                  {eventCard.state}
+                  {stateDirection && (
+                    <Text style={styles.yearDirection}>
+                      {" "}
+                      {{
+                        left: "←",
+                        right: "→",
+                        up: "↑",
+                        down: "↓",
+                        southeast: "↘",
+                        southwest: "↙",
+                        northeast: "↗",
+                        northwest: "↖",
+                      }[stateDirection]}
+                    </Text>
+                  )}
+                </Text>
                 <Text style={styles.attributeLabel}>State</Text>
               </View>
 
-              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getEraStatus(eventCard.era, targetEvent.era)) }]}>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(statuses.era) }]}>
                 <Text style={styles.attributeValue}>{eventCard.era}</Text>
+                <Text style={styles.eraRange}>{eventCard.eraStartYear}-{eventCard.eraEndYear}</Text>
                 <Text style={styles.attributeLabel}>Era</Text>
               </View>
 
-              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getScaleStatus(eventCard.scale, targetEvent.scale)) }]}>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(statuses.scale) }]}>
                 <Text style={styles.attributeValue}>{eventCard.scale}</Text>
                 <Text style={styles.attributeLabel}>Scale</Text>
               </View>
 
-              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getTagStatus(eventCard.tag, targetEvent.tag)) }]}>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(statuses.tag) }]}>
                 <Text style={styles.attributeValue}>{eventCard.tag}</Text>
                 <Text style={styles.attributeLabel}>Tag</Text>
               </View>
@@ -192,11 +227,46 @@ export default function Index() {
       <Modal
         animationType="fade"
         transparent
-        visible={isGameLost}
-        onRequestClose={() => undefined}
+        visible={isWinModalVisible}
+        onRequestClose={() => setIsWinModalVisible(false)}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.gameOverModal}>
+            <Pressable
+              accessibilityLabel="Close win dialog"
+              onPress={() => setIsWinModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>×</Text>
+            </Pressable>
+            <Text style={styles.winTitle}>You Win!</Text>
+            <Image
+              source={{ uri: wonEvent?.image ?? targetEvent.image }}
+              style={styles.answerImage}
+            />
+            <Text style={styles.answerName}>{wonEvent?.name ?? targetEvent.name}</Text>
+            <Text style={styles.eventInformationTitle}>Event Information</Text>
+            <Text style={styles.eventInformation}>
+              {wonEvent?.description || targetEvent.description || "Event information coming soon."}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isGameLost && isGameOverModalVisible}
+        onRequestClose={() => setIsGameOverModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.gameOverModal}>
+            <Pressable
+              accessibilityLabel="Close game over dialog"
+              onPress={() => setIsGameOverModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>×</Text>
+            </Pressable>
             <Text style={styles.gameOverTitle}>Game Over</Text>
             <Text style={styles.gameOverMessage}>
               The answer was:
@@ -315,6 +385,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   attributeGrid: {
+    width: "100%",
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
@@ -322,7 +393,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   attributeCard: {
-    minWidth: 120,
+    width: "30%",
     minHeight: 72,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -340,6 +411,11 @@ const styles = StyleSheet.create({
   yearDirection: {
     fontSize: 20,
     fontWeight: "700",
+  },
+  eraRange: {
+    marginTop: 2,
+    color: "#202224",
+    fontSize: 12,
   },
   attributeLabel: {
     marginTop: 4,
@@ -378,8 +454,24 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#f0f0f3",
   },
+  closeButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    padding: 4,
+  },
+  closeButtonText: {
+    color: "#60646c",
+    fontSize: 28,
+    lineHeight: 28,
+  },
   gameOverTitle: {
     color: "#202224",
+    fontSize: 28,
+    fontWeight: "700",
+  },
+  winTitle: {
+    color: "#4caf50",
     fontSize: 28,
     fontWeight: "700",
   },
@@ -406,5 +498,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: "#60646c",
     fontSize: 16,
+  },
+  eventInformation: {
+    marginTop: 16,
+    color: "#60646c",
+    fontSize: 16,
+    lineHeight: 24,
+    textAlign: "center",
+  },
+  eventInformationTitle: {
+    marginTop: 16,
+    color: "#202224",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

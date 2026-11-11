@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 
 from game.loc_events import LOC_EVENTS, REMOVED_LOC_EVENT_NAMES
 from game.kansas_events import KANSAS_EVENTS
-from game.models import Era, Event, EventTag, Scale, State, Tag
+from game.models import Era, Event, Scale, State, Tag
 from game.wikipedia_events import WIKIPEDIA_EVENTS
 from game.tragedy_events import TRAGEDY_EVENT_NAMES
 
@@ -24,62 +24,19 @@ class Command(BaseCommand):
         }
 
         states = {
-            name: State.objects.update_or_create(
-                state_name=name,
-                defaults={"abbreviation": abbreviation},
-            )[0]
-            for name, abbreviation in {
-                "Alabama": "AL",
-                "Alaska": "AK",
-                "Arizona": "AZ",
-                "Arkansas": "AR",
-                "California": "CA",
-                "Colorado": "CO",
-                "Connecticut": "CT",
-                "Delaware": "DE",
-                "Florida": "FL",
-                "Georgia": "GA",
-                "Hawaii": "HI",
-                "Idaho": "ID",
-                "Illinois": "IL",
-                "Indiana": "IN",
-                "Iowa": "IA",
-                "Kansas": "KS",
-                "Kentucky": "KY",
-                "Louisiana": "LA",
-                "Maine": "ME",
-                "Maryland": "MD",
-                "Massachusetts": "MA",
-                "Michigan": "MI",
-                "Minnesota": "MN",
-                "Mississippi": "MS",
-                "Missouri": "MO",
-                "Montana": "MT",
-                "Nebraska": "NE",
-                "Nevada": "NV",
-                "New Hampshire": "NH",
-                "New Jersey": "NJ",
-                "New Mexico": "NM",
-                "New York": "NY",
-                "North Carolina": "NC",
-                "North Dakota": "ND",
-                "Ohio": "OH",
-                "Oklahoma": "OK",
-                "Oregon": "OR",
-                "Pennsylvania": "PA",
-                "Rhode Island": "RI",
-                "South Carolina": "SC",
-                "South Dakota": "SD",
-                "Tennessee": "TN",
-                "Texas": "TX",
-                "Utah": "UT",
-                "Vermont": "VT",
-                "Virginia": "VA",
-                "Washington": "WA",
-                "West Virginia": "WV",
-                "Wisconsin": "WI",
-                "Wyoming": "WY",
-            }.items()
+            name: State.objects.get_or_create(state_name=name)[0]
+            for name in [
+                "Alabama", "Alaska", "Arizona", "Arkansas", "California",
+                "Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
+                "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas",
+                "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts",
+                "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana",
+                "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico",
+                "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma",
+                "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+                "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
+                "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+            ]
         }
         eras = {
             name: Era.objects.update_or_create(
@@ -267,17 +224,17 @@ class Command(BaseCommand):
                     "state": states[state],
                     "era": eras[era],
                     "scale": scales[scale],
+                    "tag": tags["Tragedy"] if name in TRAGEDY_EVENT_NAMES else tags[tag],
                     "description": description,
                 },
             )[0]
             if image_data.get("status") == "mapped":
                 event.image_url = image_data["imageUrl"]
                 event.save(update_fields=["image_url"])
-            event.tags.set([tags["Tragedy"] if name in TRAGEDY_EVENT_NAMES else tags[tag]])
 
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded {Event.objects.count()} events and "
-                f"{EventTag.objects.count()} event-tag associations."
+                f"{Event.objects.count()} event-tag assignments."
             )
         )
