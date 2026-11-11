@@ -1,3 +1,5 @@
+import { GameCardColors } from "@/constants/theme";
+
 export type EventCard = {
   eventId: number;
   name: string;
@@ -133,10 +135,10 @@ export const getStateDirection = (guess: string, target: string): StateDirection
 export const getAttributeColor = (status: AttributeStatus) => {
   switch (status) {
     case "correct":
-      return "#4caf50";
+      return GameCardColors.correct;
     case "close":
-      return "#f2c94c";
+      return GameCardColors.close;
     default:
-      return "#9aa0a6";
+      return GameCardColors.incorrect;
   }
 };

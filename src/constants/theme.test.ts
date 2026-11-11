@@ -1,11 +1,15 @@
 /// <reference types="jest" />
 
-import { BottomTabInset, Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, GameCardColors, MaxContentWidth, Palette, Spacing } from '@/constants/theme';
 
 describe('theme constants', () => {
   it('provides the shared color themes', () => {
-    expect(Colors.light.background).toBe('#2f3234');
-    expect(Colors.dark.background).toBe('#2f3234');
+    expect(Palette.cream).toBe('#fbf1e9');
+    expect(Palette.brown).toBe('#7d6048');
+    expect(Palette.green).toBe('#477d4b');
+    expect(GameCardColors.correct).toBe('#4caf50');
+    expect(GameCardColors.close).toBe('#f2c94c');
+    expect(GameCardColors.incorrect).toBe(Palette.cream);
   });
 
   it('keeps spacing and layout values stable', () => {

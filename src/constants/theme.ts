@@ -7,20 +7,32 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
+export const Palette = {
+  cream: '#fbf1e9',
+  brown: '#7d6048',
+  green: '#477d4b',
+} as const;
+
+export const GameCardColors = {
+  correct: '#4caf50',
+  close: '#f2c94c',
+  incorrect: Palette.cream,
+} as const;
+
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#2f3234',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Palette.brown,
+    background: Palette.brown,
+    backgroundElement: Palette.cream,
+    backgroundSelected: Palette.green,
+    textSecondary: Palette.brown,
   },
   dark: {
-    text: '#ffffff',
-    background: '#2f3234',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: Palette.cream,
+    background: Palette.brown,
+    backgroundElement: Palette.brown,
+    backgroundSelected: Palette.green,
+    textSecondary: Palette.cream,
   },
 } as const;
 

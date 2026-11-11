@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
+import { Palette } from "@/constants/theme";
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#2f3234" } }} />;
+  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Palette.brown } }} />;
 }

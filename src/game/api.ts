@@ -2,7 +2,8 @@ import { EventCard } from "@/game/event-logic";
 import { API_BASE_URL } from "@/constants/api";
 
 type EventsResponse = { events: EventCard[] };
-type SessionResponse = { sessionId: number; target: EventCard };
+export type GameMode = "daily" | "free";
+type SessionResponse = { sessionId: number; target: EventCard; mode: GameMode };
 
 export type GuessStatuses = {
   year: "correct" | "close" | "incorrect";
@@ -43,8 +44,11 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const fetchEvents = async () => (await request<EventsResponse>("/events")).events;
 
-export const createSession = async () =>
-  request<SessionResponse>("/sessions", { method: "POST", body: "{}" });
+export const createSession = async (mode: GameMode, excludeEventId?: number) =>
+  request<SessionResponse>("/sessions", {
+    method: "POST",
+    body: JSON.stringify({ mode, excludeEventId }),
+  });
 
 export const submitGuess = async (sessionId: number, guessedEventId: number) =>
   request<GuessResponse>(`/sessions/${sessionId}/guesses`, {
