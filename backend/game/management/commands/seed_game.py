@@ -1,4 +1,6 @@
 from datetime import date
+import json
+from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
@@ -13,6 +15,14 @@ class Command(BaseCommand):
     help = "Seed the normalized Histole catalog with prototype events."
 
     def handle(self, *args, **options):
+        image_manifest_path = Path(__file__).resolve().parents[2] / "event_images.json"
+        with image_manifest_path.open(encoding="utf-8") as image_manifest_file:
+            image_manifest_data = json.load(image_manifest_file)
+        image_manifest = {
+            entry["eventName"]: entry
+            for entry in image_manifest_data.get("events", [])
+        }
+
         states = {
             name: State.objects.update_or_create(
                 state_name=name,
@@ -239,7 +249,10 @@ class Command(BaseCommand):
         events.extend(WIKIPEDIA_EVENTS)
         events.extend(KANSAS_EVENTS)
         valid_state_names = set(states)
-        for name, year, state, era, scale, tag in events:
+        for event_data in events:
+            name, year, state, era, scale, tag = event_data[:6]
+            description = event_data[6] if len(event_data) > 6 else ""
+            image_data = image_manifest.get(name, {})
             if state not in valid_state_names:
                 self.stderr.write(
                     self.style.WARNING(
@@ -254,8 +267,12 @@ class Command(BaseCommand):
                     "state": states[state],
                     "era": eras[era],
                     "scale": scales[scale],
+                    "description": description,
                 },
             )[0]
+            if image_data.get("status") == "mapped":
+                event.image_url = image_data["imageUrl"]
+                event.save(update_fields=["image_url"])
             event.tags.set([tags["Tragedy"] if name in TRAGEDY_EVENT_NAMES else tags[tag]])
 
         self.stdout.write(
