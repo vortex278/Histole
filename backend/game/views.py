@@ -1,4 +1,5 @@
 import json
+import random
 from datetime import date
 
 from django.db import transaction
@@ -94,9 +95,31 @@ def sessions(request):
     catalog = list(get_events())
     if not catalog:
         return JsonResponse({"error": "The event catalog is empty."}, status=503)
-    target = catalog[int(date.today().strftime("%Y%m%d")) % len(catalog)]
+    try:
+        payload = json.loads(request.body or "{}")
+        mode = payload.get("mode", "daily")
+        exclude_event_id = payload.get("excludeEventId")
+        if mode not in {"daily", "free"}:
+            raise ValueError
+        if exclude_event_id is not None:
+            exclude_event_id = int(exclude_event_id)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "A valid game mode is required."}, status=400)
+
+    if mode == "daily":
+        target = catalog[int(date.today().strftime("%Y%m%d")) % len(catalog)]
+    else:
+        free_catalog = [
+            event for event in catalog
+            if event.id != exclude_event_id
+        ]
+        target = random.choice(free_catalog or catalog)
+
     session = GameSession.objects.create(played_on=date.today(), target_event=target)
-    return JsonResponse({"sessionId": session.id, "target": serialize_event(target)}, status=201)
+    return JsonResponse(
+        {"sessionId": session.id, "target": serialize_event(target), "mode": mode},
+        status=201,
+    )
 
 
 @csrf_exempt

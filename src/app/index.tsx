@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   modeDescription: {
-    marginTop: 6,
+    marginLeft: 10,
     color: Palette.brown,
     fontSize: 15,
   },

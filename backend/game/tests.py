@@ -134,6 +134,25 @@ class CatalogTests(TestCase):
         self.assertEqual(response.json()["attemptNumber"], 1)
         self.assertEqual(GameSession.objects.get(pk=session_id).guesses_used, 1)
 
+    def test_free_session_uses_a_different_target_when_excluded(self):
+        client = Client()
+        daily_response = client.post(
+            "/api/sessions",
+            data={"mode": "daily"},
+            content_type="application/json",
+        )
+        daily_target_id = daily_response.json()["target"]["eventId"]
+
+        free_response = client.post(
+            "/api/sessions",
+            data={"mode": "free", "excludeEventId": daily_target_id},
+            content_type="application/json",
+        )
+
+        self.assertEqual(free_response.status_code, 201)
+        self.assertEqual(free_response.json()["mode"], "free")
+        self.assertNotEqual(free_response.json()["target"]["eventId"], daily_target_id)
+
     def test_guess_api_persists_close_statuses(self):
         client = Client()
         target = Event.objects.get(event_name="Declaration of Independence")

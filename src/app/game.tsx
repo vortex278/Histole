@@ -22,6 +22,33 @@ type GameScreenProps = {
   mode: GameMode;
 };
 
+const TIP_PAGES = [
+  {
+    title: "How to play",
+    text: "Use each guess to learn more about the target event. The feedback cards show how close every attribute is.",
+  },
+  {
+    title: "Colors",
+    text: "Green means correct, yellow means close, and cream means the attribute does not match.",
+  },
+  {
+    title: "Year",
+    text: "The year arrow points toward an earlier or later target year. A matching year is green.",
+  },
+  {
+    title: "State",
+    text: "The state arrow points toward the target state. Use the eight directions to guide your next guess.",
+  },
+  {
+    title: "Era and scale",
+    text: "Adjacent eras and geographic scales are close. Use the database-backed ranges and ordering as clues.",
+  },
+  {
+    title: "Tag",
+    text: "A matching historical tag is correct. Different tags are not a match.",
+  },
+] as const;
+
 export default function GameScreen({ mode }: GameScreenProps) {
   const [targetEvent, setTargetEvent] = useState<EventCard>();
   const [sessionId, setSessionId] = useState<number>();
@@ -38,6 +65,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState("");
   const [isStartingGame, setIsStartingGame] = useState(false);
+  const [tipPage, setTipPage] = useState(0);
   const maxGuesses = 15;
   const isGameLost = guesses.length >= maxGuesses && !isGameWon;
   const isGameOver = isGameWon || isGameLost;
@@ -77,6 +105,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
       setWonEvent(undefined);
       setIsWinModalVisible(false);
       setIsGameOverModalVisible(false);
+      setTipPage(0);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to start a new game.");
     } finally {
@@ -139,13 +168,22 @@ export default function GameScreen({ mode }: GameScreenProps) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
-      <Link href={"/" as Href} style={styles.menuLink}>
-        <Text style={styles.menuLinkText}>← Main Menu</Text>
+      <Link href={"/" as Href} asChild>
+        <Pressable accessibilityRole="button" style={styles.menuButton}>
+          <Text style={styles.menuButtonText}>← Main Menu</Text>
+        </Pressable>
       </Link>
       <View style={styles.logoFrame}>
         <Image source={require("../../assets/images/histole-logo.png")} style={styles.logo} contentFit="contain" />
       </View>
       <Text style={styles.modeLabel}>{mode === "daily" ? "Daily Game" : "Free Play"}</Text>
+      {guesses.length === 0 && (
+        <View style={styles.instructions}>
+          <Text style={styles.instructionsText}>
+            Guess an event to reveal clues about its year, state, era, scale, and tag.
+          </Text>
+        </View>
+      )}
       {mode === "free" && isGameOver && (
         <Pressable
           style={styles.modeButton}
@@ -292,6 +330,35 @@ export default function GameScreen({ mode }: GameScreenProps) {
           </View>
         );
       })}
+      <View style={styles.tipPanel}>
+        <Text style={styles.tipHeading}>Tip</Text>
+        <Text style={styles.tipTitle}>{TIP_PAGES[tipPage].title}</Text>
+        <Text style={styles.tipText}>{TIP_PAGES[tipPage].text}</Text>
+        <View style={styles.tipNavigation}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous tip"
+            disabled={tipPage === 0}
+            onPress={() => setTipPage((page) => Math.max(0, page - 1))}
+            style={[styles.tipArrow, tipPage === 0 && styles.tipArrowDisabled]}
+          >
+            <Text style={styles.tipArrowText}>←</Text>
+          </Pressable>
+          <Text style={styles.tipPageNumber}>{tipPage + 1} / {TIP_PAGES.length}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next tip"
+            disabled={tipPage === TIP_PAGES.length - 1}
+            onPress={() => setTipPage((page) => Math.min(TIP_PAGES.length - 1, page + 1))}
+            style={[
+              styles.tipArrow,
+              tipPage === TIP_PAGES.length - 1 && styles.tipArrowDisabled,
+            ]}
+          >
+            <Text style={styles.tipArrowText}>→</Text>
+          </Pressable>
+        </View>
+      </View>
       <Modal
         animationType="fade"
         transparent
@@ -317,6 +384,35 @@ export default function GameScreen({ mode }: GameScreenProps) {
             <Text style={styles.eventInformation}>
               {wonEvent?.description || targetEvent.description || "Event information coming soon."}
             </Text>
+            {mode === "daily" && (
+              <>
+                <Text style={styles.freePlayPrompt}>
+                  Want more Histole? Play The Free Play Version!
+                </Text>
+                <Link href={"/free" as Href} asChild>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setIsWinModalVisible(false)}
+                    style={styles.playAgainButton}
+                  >
+                    <Text style={styles.playAgainButtonText}>Play Free Play</Text>
+                  </Pressable>
+                </Link>
+              </>
+            )}
+            {mode === "free" && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Play Again"
+                onPress={() => void startGame("free")}
+                disabled={isStartingGame}
+                style={styles.playAgainButton}
+              >
+                <Text style={styles.playAgainButtonText}>
+                  {isStartingGame ? "Starting game..." : "Play Again"}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </Modal>
@@ -347,6 +443,35 @@ export default function GameScreen({ mode }: GameScreenProps) {
             <Text style={styles.answerDetails}>
               {targetEvent.year} · {targetEvent.state}
             </Text>
+            {mode === "daily" && (
+              <>
+                <Text style={styles.freePlayPrompt}>
+                  Want more Histole? Play The Free Play Version!
+                </Text>
+                <Link href={"/free" as Href} asChild>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setIsGameOverModalVisible(false)}
+                    style={styles.playAgainButton}
+                  >
+                    <Text style={styles.playAgainButtonText}>Play Free Play</Text>
+                  </Pressable>
+                </Link>
+              </>
+            )}
+            {mode === "free" && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Play Again"
+                onPress={() => void startGame("free")}
+                disabled={isStartingGame}
+                style={styles.playAgainButton}
+              >
+                <Text style={styles.playAgainButtonText}>
+                  {isStartingGame ? "Starting game..." : "Play Again"}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </Modal>
@@ -390,18 +515,96 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  menuLink: {
+  menuButton: {
     alignSelf: "flex-start",
+    marginLeft: 16,
     marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: Palette.cream,
   },
-  menuLinkText: {
-    color: Palette.cream,
+  menuButtonText: {
+    color: Palette.brown,
     fontSize: 15,
+    fontWeight: "600",
   },
   modeLabel: {
     marginTop: 8,
     color: Palette.cream,
     fontSize: 16,
+  },
+  instructions: {
+    width: "90%",
+    maxWidth: 480,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Palette.cream,
+  },
+  instructionsText: {
+    color: Palette.brown,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  tipPanel: {
+    width: "90%",
+    maxWidth: 480,
+    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Palette.cream,
+  },
+  tipHeading: {
+    color: Palette.cream,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  tipTitle: {
+    marginTop: 6,
+    color: Palette.cream,
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  tipText: {
+    marginTop: 4,
+    color: Palette.cream,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
+  tipNavigation: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+  },
+  tipArrow: {
+    minWidth: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: Palette.cream,
+  },
+  tipArrowDisabled: {
+    opacity: 0.35,
+  },
+  tipArrowText: {
+    color: Palette.brown,
+    fontSize: 20,
+    textAlign: "center",
+  },
+  tipPageNumber: {
+    color: Palette.cream,
+    fontSize: 13,
   },
   modeButtons: {
     flexDirection: "row",
@@ -565,7 +768,7 @@ const styles = StyleSheet.create({
   },
   successMessage: {
     marginTop: 24,
-    color: Palette.green,
+    color: Palette.cream,
     fontSize: 18,
     fontWeight: "600",
     textAlign: "center",
@@ -642,5 +845,24 @@ const styles = StyleSheet.create({
     color: Palette.brown,
     fontSize: 14,
     fontWeight: "700",
+  },
+  playAgainButton: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: Palette.brown,
+  },
+  playAgainButtonText: {
+    color: Palette.cream,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  freePlayPrompt: {
+    marginTop: 20,
+    color: Palette.brown,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
