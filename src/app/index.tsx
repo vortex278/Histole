@@ -1,13 +1,10 @@
 import { Href, Link } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Palette } from "@/constants/theme";
 
 export default function Index() {
-  const { width } = useWindowDimensions();
-  const vineWidth = Math.max(width * 1.08, 360);
-
   return (
     <LinearGradient
       colors={[Palette.brownLight, Palette.brown]}
@@ -15,13 +12,6 @@ export default function Index() {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <View pointerEvents="none" style={styles.vineRow}>
-        <Image
-          source={require("../../assets/images/histole-ivy.png")}
-          style={{ width: vineWidth, aspectRatio: 1600 / 580 }}
-          contentFit="contain"
-        />
-      </View>
       <View style={styles.logoFrame}>
         <Image source={require("../../assets/images/histole-logo.png")} style={styles.logo} contentFit="contain" />
       </View>
@@ -46,20 +36,11 @@ const styles = StyleSheet.create({
     gap: 20,
     padding: 24,
   },
-  vineRow: {
-    position: "absolute",
-    top: "42%",
-    left: 0,
-    width: "100%",
-    alignItems: "center",
-    zIndex: 1,
-  },
   logoFrame: {
     width: 240,
     height: 240,
     borderRadius: 20,
     backgroundColor: Palette.cream,
-    zIndex: 2,
   },
   logo: {
     width: "100%",
