@@ -46,9 +46,10 @@ npm install
 npx expo start -c
 ```
 
-The default local API setting is documented in [.env.example](./.env.example).
-If `.env.local` exists, it overrides that value; `.env.local` is ignored by
-Git and should not be committed.
+The default platform-specific API settings are documented in
+[.env.example](./.env.example). If `.env.local` exists, it can override the
+platform-specific values; `.env.local` is ignored by Git and should not be
+committed.
 
 ### Web launch: step by step
 
@@ -79,11 +80,16 @@ backend\venv\Scripts\python.exe backend\manage.py runserver 127.0.0.1:8000
 cd C:\Users\sydro\Histole
 ```
 
-5. Confirm `.env.local` contains the web API URL:
+5. Confirm `.env.local` contains the web API URL (or remove the file to use the
+default):
 
 ```text
-EXPO_PUBLIC_API_URL=http://localhost:8000/api
+EXPO_PUBLIC_WEB_API_URL=http://localhost:8000/api
 ```
+
+`EXPO_PUBLIC_API_URL` is retained as a fallback for Android and other native
+platforms. It is not used by web when no `EXPO_PUBLIC_WEB_API_URL` is set, so an
+Android emulator URL cannot break browser testing.
 
 6. Start Expo for web:
 
@@ -136,7 +142,7 @@ address, not a public GitHub address.
 ignored by Git, so the address will not be committed or published:
 
 ```text
-EXPO_PUBLIC_API_URL=http://YOUR_COMPUTER_IP:8000/api
+EXPO_PUBLIC_ANDROID_API_URL=http://YOUR_COMPUTER_IP:8000/api
 ```
 
 Replace `YOUR_COMPUTER_IP` with the address from `ipconfig`.
@@ -189,7 +195,7 @@ backend\venv\Scripts\python.exe backend\manage.py seed_game
 5. Set `.env.local` to the emulator address:
 
 ```text
-EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api
+EXPO_PUBLIC_ANDROID_API_URL=http://10.0.2.2:8000/api
 ```
 
 `10.0.2.2` is an Android Studio emulator address that maps to the computer's

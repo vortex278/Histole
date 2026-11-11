@@ -10,6 +10,7 @@ export type EventCard = {
 };
 
 export type AttributeStatus = "correct" | "close" | "incorrect";
+export type YearDirection = "up" | "down" | null;
 
 const ERA_ORDER = ["Colonial", "American Revolution", "New Nation", "National Expansion", "Civil War", "Industrial America", "Progressive Era", "World War II", "Post War", "Modern Era"];
 const SCALE_ORDER = ["Local", "State", "Regional", "National", "International"];
@@ -93,6 +94,17 @@ export const getYearStatus = (guess: string, target: string): AttributeStatus =>
   }
 
   return Math.abs(guessYear - targetYear) <= 10 ? "close" : "incorrect";
+};
+
+export const getYearDirection = (guess: string, target: string): YearDirection => {
+  const guessYear = Number(guess);
+  const targetYear = Number(target);
+
+  if (!Number.isFinite(guessYear) || !Number.isFinite(targetYear) || guessYear === targetYear) {
+    return null;
+  }
+
+  return targetYear > guessYear ? "up" : "down";
 };
 
 export const getStateStatus = (guess: string, target: string): AttributeStatus => {

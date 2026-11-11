@@ -10,6 +10,7 @@ import {
     getScaleStatus,
     getStateStatus,
     getTagStatus,
+    getYearDirection,
     getYearStatus,
 } from "@/game/event-logic";
 
@@ -137,47 +138,57 @@ export default function Index() {
         <Text style={styles.buttonText}>Submit Guess</Text>
       </Pressable>}
       {isGameWon && <Text style={styles.successMessage}>You got it! Today&apos;s event is {targetEvent.name}.</Text>}
-      {guesses.map((eventCard) => (
-        <View style={styles.gameCard} key={eventCard.eventId}>
-          <View style={styles.eventHeader}>
-            <Image
-              source={{ uri: eventCard.image }}
-              style={styles.eventImage}
-            />
+      {guesses.map((eventCard) => {
+        const yearDirection = getYearDirection(eventCard.year, targetEvent.year);
 
-            <View style={styles.eventTitleContainer}>
-              <Text style={styles.eventName}>{eventCard.name}</Text>
+        return (
+          <View style={styles.gameCard} key={eventCard.eventId}>
+            <View style={styles.eventHeader}>
+              <Image
+                source={{ uri: eventCard.image }}
+                style={styles.eventImage}
+              />
+
+              <View style={styles.eventTitleContainer}>
+                <Text style={styles.eventName}>{eventCard.name}</Text>
+              </View>
+            </View>
+
+            <View style={styles.attributeGrid}>
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getYearStatus(eventCard.year, targetEvent.year)) }]}>
+                <Text
+                  style={styles.attributeValue}
+                  accessibilityLabel={`Year ${eventCard.year}${yearDirection === "up" ? ", guess a greater year" : yearDirection === "down" ? ", guess a lesser year" : ""}`}
+                >
+                  {eventCard.year}
+                  {yearDirection && <Text style={styles.yearDirection}> {yearDirection === "up" ? "^" : "↓"}</Text>}
+                </Text>
+                <Text style={styles.attributeLabel}>Year</Text>
+              </View>
+
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getStateStatus(eventCard.state, targetEvent.state)) }]}>
+                <Text style={styles.attributeValue}>{eventCard.state}</Text>
+                <Text style={styles.attributeLabel}>State</Text>
+              </View>
+
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getEraStatus(eventCard.era, targetEvent.era)) }]}>
+                <Text style={styles.attributeValue}>{eventCard.era}</Text>
+                <Text style={styles.attributeLabel}>Era</Text>
+              </View>
+
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getScaleStatus(eventCard.scale, targetEvent.scale)) }]}>
+                <Text style={styles.attributeValue}>{eventCard.scale}</Text>
+                <Text style={styles.attributeLabel}>Scale</Text>
+              </View>
+
+              <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getTagStatus(eventCard.tag, targetEvent.tag)) }]}>
+                <Text style={styles.attributeValue}>{eventCard.tag}</Text>
+                <Text style={styles.attributeLabel}>Tag</Text>
+              </View>
             </View>
           </View>
-
-          <View style={styles.attributeGrid}>
-            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getYearStatus(eventCard.year, targetEvent.year)) }]}>
-              <Text style={styles.attributeValue}>{eventCard.year}</Text>
-              <Text style={styles.attributeLabel}>Year</Text>
-            </View>
-
-            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getStateStatus(eventCard.state, targetEvent.state)) }]}>
-              <Text style={styles.attributeValue}>{eventCard.state}</Text>
-              <Text style={styles.attributeLabel}>State</Text>
-            </View>
-
-            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getEraStatus(eventCard.era, targetEvent.era)) }]}>
-              <Text style={styles.attributeValue}>{eventCard.era}</Text>
-              <Text style={styles.attributeLabel}>Era</Text>
-            </View>
-
-            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getScaleStatus(eventCard.scale, targetEvent.scale)) }]}>
-              <Text style={styles.attributeValue}>{eventCard.scale}</Text>
-              <Text style={styles.attributeLabel}>Scale</Text>
-            </View>
-
-            <View style={[styles.attributeCard, { backgroundColor: getAttributeColor(getTagStatus(eventCard.tag, targetEvent.tag)) }]}>
-              <Text style={styles.attributeValue}>{eventCard.tag}</Text>
-              <Text style={styles.attributeLabel}>Tag</Text>
-            </View>
-          </View>
-        </View>
-      ))}
+        );
+      })}
       <Modal
         animationType="fade"
         transparent
@@ -325,6 +336,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  yearDirection: {
+    fontSize: 20,
+    fontWeight: "700",
   },
   attributeLabel: {
     marginTop: 4,
