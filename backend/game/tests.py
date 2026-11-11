@@ -54,6 +54,9 @@ class CatalogTests(TestCase):
             "http://localhost:8081",
         )
         self.assertGreaterEqual(len(response.json()["events"]), 135)
+        self.assertFalse(
+            any(event["name"].endswith(" was Born") for event in response.json()["events"])
+        )
         self.assertIn(
             "California Gold Rush",
             [event["name"] for event in response.json()["events"]],

@@ -23,7 +23,11 @@ def serialize_event(event):
 
 
 def get_events():
-    return Event.objects.select_related("state", "era", "scale").prefetch_related("tags")
+    return (
+        Event.objects.exclude(event_name__endswith=" was Born")
+        .select_related("state", "era", "scale")
+        .prefetch_related("tags")
+    )
 
 
 @require_http_methods(["GET"])

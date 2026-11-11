@@ -4,7 +4,6 @@ Source: https://www.loc.gov/classroom-materials/united-states-history-primary-so
 """
 
 LOC_EVENTS = [
-    ("First Permanent English Settlement at Jamestown", 1607, "Virginia", "Colonial Era", "International", "Expansion"),
     ("First Representative Assembly in Virginia", 1619, "Virginia", "Colonial Era", "National", "Politics"),
     ("Plymouth Colony Established", 1620, "Massachusetts", "Colonial Era", "International", "Migration"),
     ("Maryland Colony Established", 1634, "Maryland", "Colonial Era", "International", "Migration"),

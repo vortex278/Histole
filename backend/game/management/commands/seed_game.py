@@ -227,7 +227,14 @@ class Command(BaseCommand):
                 "Military",
             ),
         ]
-        Event.objects.filter(event_name__in=REMOVED_LOC_EVENT_NAMES).delete()
+        Event.objects.filter(
+            event_name__in=REMOVED_LOC_EVENT_NAMES,
+        ).delete()
+        Event.objects.filter(
+            event_name__endswith=" was Born",
+            target_sessions__isnull=True,
+            guesses__isnull=True,
+        ).delete()
         events.extend(LOC_EVENTS)
         events.extend(WIKIPEDIA_EVENTS)
         events.extend(KANSAS_EVENTS)
