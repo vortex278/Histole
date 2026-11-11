@@ -269,10 +269,29 @@ npm run web
 
 ## Gameplay
 
+The main menu opens two separate modes:
+
+- **Daily Game** uses the repeatable daily target and allows one round.
+- **Free Play** selects a random target and provides a **Play Again** button
+  after a win or loss so another round can begin immediately.
+
+Each game screen shows a short instruction panel before the first guess. A
+persistent tip panel below the guess cards explains how to use the arrows and
+feedback colors. The instruction panel disappears after the first valid guess,
+while the tip panel remains available as the cards grow.
+
+To play:
+
 1. Enter a historical event and choose a result from the suggestions.
-2. Submit the guess to compare its attributes with the daily target.
-3. Use the color feedback to narrow down the target event.
+2. Submit the guess to compare its attributes with the target.
+3. Use the feedback to narrow down the target event:
+   - Green means the attribute is correct.
+   - Yellow means the attribute is close.
+   - Cream means the attribute does not match.
 4. Solve the round before reaching the 15-guess limit.
+
+The Main Menu button returns to the mode-selection screen. After completing a
+Daily Game, the win and game-over screens also offer a button to open Free Play.
 
 The normalized catalog is seeded by `backend/game/management/commands/seed_game.py`.
 The current seed list contains named, hand-authored historical events, including

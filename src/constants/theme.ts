@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 export const Palette = {
   cream: '#fbf1e9',
   brown: '#7d6048',
+  brownLight: '#92745a',
   green: '#477d4b',
 } as const;
 

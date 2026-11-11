@@ -6,6 +6,7 @@ describe('theme constants', () => {
   it('provides the shared color themes', () => {
     expect(Palette.cream).toBe('#fbf1e9');
     expect(Palette.brown).toBe('#7d6048');
+    expect(Palette.brownLight).toBe('#92745a');
     expect(Palette.green).toBe('#477d4b');
     expect(GameCardColors.correct).toBe('#4caf50');
     expect(GameCardColors.close).toBe('#f2c94c');

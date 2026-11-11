@@ -17,5 +17,5 @@ body,
 
 body {
   margin: 0;
-  background-color: #7d6048;
+  background: linear-gradient(135deg, #92745a 0%, #7d6048 100%);
 }

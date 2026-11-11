@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { Href, Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -159,15 +160,24 @@ export default function GameScreen({ mode }: GameScreenProps) {
   };
 
   if (isLoading) {
-    return <View style={styles.centered}><Text style={styles.title}>Loading Histole...</Text></View>;
+    return (
+      <LinearGradient colors={[Palette.brownLight, Palette.brown]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.centered}>
+        <Text style={styles.title}>Loading Histole...</Text>
+      </LinearGradient>
+    );
   }
 
   if (apiError || !targetEvent) {
-    return <View style={styles.centered}><Text style={styles.errorMessage}>{apiError || "Game data is unavailable."}</Text></View>;
+    return (
+      <LinearGradient colors={[Palette.brownLight, Palette.brown]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.centered}>
+        <Text style={styles.errorMessage}>{apiError || "Game data is unavailable."}</Text>
+      </LinearGradient>
+    );
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <LinearGradient colors={[Palette.brownLight, Palette.brown]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.container}>
       <Link href={"/" as Href} asChild>
         <Pressable accessibilityRole="button" style={styles.menuButton}>
           <Text style={styles.menuButtonText}>← Main Menu</Text>
@@ -228,7 +238,7 @@ export default function GameScreen({ mode }: GameScreenProps) {
                 <Text style={styles.suggestionText}>{event.name}</Text>
               </Pressable>
             ))}
-          </ScrollView>
+            </ScrollView>
         )}
       </View>}
       {errorMessage.length > 0 && <Text style={styles.errorMessage}>{errorMessage}</Text>}
@@ -475,7 +485,8 @@ export default function GameScreen({ mode }: GameScreenProps) {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
@@ -484,19 +495,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Palette.brown,
     padding: 24,
   },
   screen: {
     flex: 1,
-    backgroundColor: Palette.brown,
   },
   container: {
     flexGrow: 1,
     alignItems: "center",
     paddingTop: 64,
     paddingBottom: 32,
-    backgroundColor: Palette.brown,
   },
   title: {
     color: Palette.cream,
