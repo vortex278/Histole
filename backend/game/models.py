@@ -3,7 +3,6 @@ from django.db import models
 
 class State(models.Model):
     state_name = models.CharField(max_length=50, unique=True)
-    abbreviation = models.CharField(max_length=2, unique=True)
 
     class Meta:
         ordering = ["state_name"]
@@ -57,7 +56,7 @@ class Event(models.Model):
     state = models.ForeignKey(State, on_delete=models.PROTECT, related_name="events")
     era = models.ForeignKey(Era, on_delete=models.PROTECT, related_name="events")
     scale = models.ForeignKey(Scale, on_delete=models.PROTECT, related_name="events")
-    tags = models.ManyToManyField(Tag, through="EventTag", related_name="events")
+    tag = models.ForeignKey(Tag, on_delete=models.PROTECT, related_name="events")
     description = models.TextField(default="")
     image_url = models.URLField(blank=True)
 
@@ -66,19 +65,6 @@ class Event(models.Model):
 
     def __str__(self):
         return self.event_name
-
-
-class EventTag(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    tag = models.ForeignKey(Tag, on_delete=models.PROTECT)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["event", "tag"],
-                name="unique_event_tag",
-            )
-        ]
 
 
 class GameSession(models.Model):
