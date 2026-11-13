@@ -309,6 +309,10 @@ Kansas-specific events from the [History of Kansas
 article](https://en.wikipedia.org/wiki/History_of_Kansas) are stored in
 `backend/game/kansas_events.py`; duplicate events already in the catalog are
 not repeated.
+Major sports events held in the United States are stored in
+`backend/game/sports_events.py` and use the `Sports` tag. Overseas-only sports
+events are intentionally excluded because the catalog represents locations with
+U.S. state values.
 The catalog also includes a `Tragedy` tag for significant disasters, attacks,
 and other documented tragedies. Its classifications are maintained in
 `backend/game/tragedy_events.py`; this label is intentionally broader than a

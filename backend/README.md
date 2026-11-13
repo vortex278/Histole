@@ -28,9 +28,10 @@ cd backend
 ```
 
 The SQLite file is created at `backend\data\histole.sqlite3`. The seed command is
-safe to run repeatedly and currently loads 60 historical events, including the
-five events used by the prototype: California Gold Rush, Declaration of
-Independence, Battle of Gettysburg, Moon Landing, and Louisiana Purchase.
+safe to run repeatedly and loads the historical catalog, including the 26
+U.S.-based sports events and the five events used by the prototype: California
+Gold Rush, Declaration of Independence, Battle of Gettysburg, Moon Landing,
+and Louisiana Purchase.
 
 ## Verify the database
 

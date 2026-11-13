@@ -30,6 +30,19 @@ class CatalogTests(TestCase):
         gold_rush = Event.objects.get(event_name="California Gold Rush")
         self.assertEqual(gold_rush.tag.tag_name, "Migration")
 
+    def test_sports_events_use_us_states_and_sports_tag(self):
+        sports = Event.objects.filter(tag__tag_name="Sports")
+
+        self.assertEqual(sports.count(), 26)
+        self.assertEqual(
+            Event.objects.get(event_name="Miracle on Ice").state.state_name,
+            "New York",
+        )
+        self.assertEqual(
+            Event.objects.get(event_name="2024 NBA Finals").tag.tag_name,
+            "Sports",
+        )
+
     def test_tragedy_tag_categorizes_tragic_events(self):
         self.assertEqual(
             Event.objects.get(event_name="Oklahoma City Bombing").tag.tag_name,

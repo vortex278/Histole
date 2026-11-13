@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 from game.loc_events import LOC_EVENTS, REMOVED_LOC_EVENT_NAMES
 from game.kansas_events import KANSAS_EVENTS
 from game.models import Era, Event, Scale, State, Tag
+from game.sports_events import SPORTS_EVENTS
 from game.wikipedia_events import WIKIPEDIA_EVENTS
 from game.tragedy_events import TRAGEDY_EVENT_NAMES
 
@@ -76,6 +77,7 @@ class Command(BaseCommand):
                 "Military",
                 "Politics",
                 "Science",
+                "Sports",
                 "Tragedy",
             ]
         }
@@ -205,6 +207,7 @@ class Command(BaseCommand):
         events.extend(LOC_EVENTS)
         events.extend(WIKIPEDIA_EVENTS)
         events.extend(KANSAS_EVENTS)
+        events.extend(SPORTS_EVENTS)
         valid_state_names = set(states)
         for event_data in events:
             name, year, state, era, scale, tag = event_data[:6]
