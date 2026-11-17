@@ -42,3 +42,46 @@ and Louisiana Purchase.
 
 The tests verify the event/tag relationship, duplicate association protection,
 session/guess persistence, and unique attempt numbers within a session.
+
+## Demonstrate API persistence
+
+Keep Django running in one terminal:
+
+```powershell
+..\backend\venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+```
+
+Use a second PowerShell terminal to create a session through the API. Then
+submit a guess through `POST /api/sessions/<id>/guesses`. The server terminal
+shows the request status, while the SQLite file
+`backend\data\histole.sqlite3` shows the persisted changes.
+
+Open the database in a SQLite extension or viewer and run SQL in its query
+editor, not at the PowerShell prompt:
+
+```sql
+SELECT id, played_on, target_event_id, guesses_used, solved
+FROM game_gamesession
+ORDER BY id DESC
+LIMIT 1;
+
+SELECT
+    id,
+    session_id,
+    attempt_number,
+    guessed_event_id,
+    year_status,
+    state_status,
+    era_status,
+    scale_status,
+    tag_status
+FROM game_guess
+ORDER BY id DESC
+LIMIT 5;
+```
+
+After one valid guess, the newest session should have `guesses_used = 1` and
+the newest guess should have `attempt_number = 1`. The guess endpoint writes
+the `Guess` row and updates the `GameSession` row inside one atomic
+transaction. Submitting the same event again demonstrates duplicate
+protection: the API returns HTTP 400 and no additional guess row is created.
